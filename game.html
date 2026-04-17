@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Number Battle</title>
+    <style>
+        /* --- CSS: The Visuals & Mobile Polish --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            overflow: hidden;
+            touch-action: manipulation; /* Improves mobile touch response */
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .game-card {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 85%;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Screen Shake Animation for taking damage */
+        .shake {
+            animation: shake-anim 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake-anim {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .mute-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            color: #4a5568;
+        }
+
+        .emoji-display {
+            font-size: 60px;
+            margin-bottom: 5px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .speech-bubble {
+            background: #f0f4f8;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            font-size: 16px;
+            line-height: 1.4;
+            min-height: 50px;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; top: -10px; left: 50%; margin-left: -10px;
+            border-width: 0 10px 10px; border-style: solid; border-color: #f0f4f8 transparent;
+        }
+
+        .health-section {
+            display: none; justify-content: space-between; margin-bottom: 15px; gap: 10px;
+        }
+        .health-box {
+            flex: 1; text-align: left; font-weight: bold; font-size: 13px;
+            padding: 8px; border-radius: 10px; transition: background-color 0.3s;
+        }
+        .active-turn { background-color: #ebf8ff; border: 2px solid #4299e1; }
+        
+        .health-bar-bg {
+            background: #e2e8f0; border-radius: 10px; height: 12px; margin-top: 5px; overflow: hidden;
+        }
+        .health-bar-fill {
+            height: 100%; background: #48bb78; width: 100%; transition: width 0.3s, background-color 0.3s;
+        }
+
+        .status-board {
+            display: none; justify-content: space-between; background: #edf2f7;
+            padding: 10px 15px; border-radius: 10px; margin-bottom: 20px;
+            font-weight: bold; font-size: 14px; border: 2px dashed #cbd5e0;
+        }
+
+        .controls, .setup { display: flex; flex-direction: column; gap: 12px; }
+        
+        select, input[type="number"] {
+            padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0;
+            outline: none; text-align: center; width: 100%; box-sizing: border-box;
+            /* Prevents iOS from rounding input corners */
+            -webkit-appearance: none; 
+        }
+
+        .input-group { display: flex; gap: 10px; }
+        input[type="number"] { flex-grow: 1; }
+
+        button {
+            border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px;
+            font-weight: bold; cursor: pointer; color: white;
+            /* Prevents double-tap zoom on mobile */
+            touch-action: manipulation; 
+        }
+        button:active { transform: scale(0.95); }
+        button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+
+        .btn-start { background-color: #2b6cb0; width: 100%; }
+        .btn-submit { background-color: #e53e3e; }
+        
+        .number-highlight { font-size: 20px; font-weight: bold; color: #d53f8c; }
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti"></canvas>
+
+    <div class="game-card" id="game-card">
+        <button class="mute-btn" id="mute-btn" onclick="toggleMute()">🔊</button>
+
+        <div class="emoji-display" id="emoji-display">🎮</div>
+        <div class="speech-bubble" id="message">
+            Welcome to the Battle! Choose your mode and difficulty.
+        </div>
+
+        <div class="setup" id="setup-controls">
+            <select id="game-mode">
+                <option value="pve">1 Player vs. Robot</option>
+                <option value="pvp">2 Players (Pass & Play)</option>
+            </select>
+            <select id="difficulty">
+                <option value="easy">Easy (Randomizer) | 1-50</option>
+                <option value="normal" selected>Normal (Calculator) | 1-100</option>
+                <option value="hard">Hard (Mind Reader) | 1-500</option>
+            </select>
+            <button class="btn-start" onclick="startGame()">Start Game!</button>
+        </div>
+
+        <div class="health-section" id="health-section">
+            <div class="health-box" id="p1-box">
+                🧑 P1 (<span id="p1-hp-text"></span>)
+                <div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div>
+            </div>
+            <div class="health-box" id="p2-box">
+                <span id="p2-label">🤖 AI</span> (<span id="p2-hp-text"></span>)
+                <div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div>
+            </div>
+        </div>
+
+        <div class="status-board" id="status-board">
+            <span>Min: <span id="min-display">1</span></span>
+            <span>Max: <span id="max-display">100</span></span>
+        </div>
+
+        <div class="controls" id="controls" style="display: none;">
+            <div class="input-group">
+                <input type="number" id="user-input" placeholder="Guess..." pattern="\d*">
+                <button class="btn-submit" id="submit-btn" onclick="handleUserGuess()">FIRE!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME VARIABLES ---
+        let secretNumber, low, high, maxGuesses, maxRange, p1Hp, p2Hp;
+        let currentMode, activePlayer = 1, currentDifficulty;
+        let isMuted = false;
+        
+        // --- DOM ELEMENTS ---
+        const messageEl = document.getElementById('message');
+        const setupControls = document.getElementById('setup-controls');
+        const controlsEl = document.getElementById('controls');
+        const healthSection = document.getElementById('health-section');
+        const statusBoard = document.getElementById('status-board');
+        const emojiDisplay = document.getElementById('emoji-display');
+        const userInput = document.getElementById('user-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const gameCard = document.getElementById('game-card');
+        const muteBtn = document.getElementById('mute-btn');
+        
+        // --- AUDIO SYSTEM (With Mute) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.innerText = isMuted ? "🔇" : "🔊";
+        }
+
+        function playSound(type) {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'guess') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'win') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // --- JUICE: SCREEN SHAKE ---
+        function shakeScreen() {
+            gameCard.classList.remove('shake');
+            void gameCard.offsetWidth; // Trigger reflow to restart animation
+            gameCard.classList.add('shake');
+        }
+
+        // --- INITIALIZATION ---
+        function startGame() {
+            playSound('guess');
+            currentMode = document.getElementById('game-mode').value;
+            currentDifficulty = document.getElementById('difficulty').value;
+            
+            if (currentDifficulty === 'easy') { maxRange = 50; maxGuesses = 6; }
+            else if (currentDifficulty === 'normal') { maxRange = 100; maxGuesses = 7; }
+            else if (currentDifficulty === 'hard') { maxRange = 500; maxGuesses = 10; }
+
+            secretNumber = Math.floor(Math.random() * maxRange) + 1;
+            low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; activePlayer = 1;
+            
+            document.getElementById('p2-label').innerText = currentMode === 'pvp' ? "🧑 P2" : "🤖 AI";
+            
+            setupControls.style.display = 'none'; controlsEl.style.display = 'flex';
+            statusBoard.style.display = 'flex'; healthSection.style.display = 'flex';
+            
+            userInput.setAttribute('max', maxRange);
+            updateBoard(); updateHealth(); highlightTurn();
+            
+            emojiDisplay.innerText = '⚔️';
+            messageEl.innerHTML = `Secret number is 1 to ${maxRange}.<br><b>Player 1</b>, you go first!`;
+            userInput.value = ''; enableUser(true);
+        }
+
+        function updateBoard() {
+            document.getElementById('min-display').innerText = low;
+            document.getElementById('max-display').innerText = high;
+        }
+
+        function updateHealth() {
+            const p1Pct = (p1Hp / maxGuesses) * 100; const p2Pct = (p2Hp / maxGuesses) * 100;
+            document.getElementById('p1-hp-text').innerText = p1Hp;
+            document.getElementById('p2-hp-text').innerText = p2Hp;
+            const p1Bar = document.getElementById('p1-hp-bar'); const p2Bar = document.getElementById('p2-hp-bar');
+            p1Bar.style.width = `${p1Pct}%`; p2Bar.style.width = `${p2Pct}%`;
+            p1Bar.style.backgroundColor = p1Pct > 50 ? '#48bb78' : p1Pct > 25 ? '#ecc94b' : '#f56565';
+            p2Bar.style.backgroundColor = p2Pct > 50 ? '#48bb78' : p2Pct > 25 ? '#ecc94b' : '#f56565';
+        }
+
+        function highlightTurn() {
+            document.getElementById('p1-box').classList.toggle('active-turn', activePlayer === 1);
+            document.getElementById('p2-box').classList.toggle('active-turn', activePlayer === 2);
+        }
+
+        function enableUser(enable) {
+            userInput.disabled = !enable; submitBtn.disabled = !enable;
+            // Mobile Polish: Don't auto-focus on mobile to prevent jarring keyboard pops
+            if(enable && window.innerWidth > 768) userInput.focus(); 
+        }
+
+        // --- MAIN GAME LOOP ---
+        function handleUserGuess() {
+            let guess = parseInt(userInput.value);
+            // Mobile Polish: Drop keyboard immediately after guessing
+            userInput.blur(); 
+            
+            if (isNaN(guess) || guess < 1 || guess > maxRange) {
+                playSound('error'); shakeScreen();
+                messageEl.innerHTML = `Invalid! Guess between 1 and ${maxRange}!`; return;
+            }
+
+            playSound('guess');
+            let playerName = activePlayer === 1 ? "Player 1" : "Player 2";
+            
+            if (guess === secretNumber) { triggerWin(playerName, guess); return; }
+
+            if (activePlayer === 1) p1Hp--; else p2Hp--;
+            updateHealth(); shakeScreen(); playSound('error');
+
+            if (p1Hp <= 0 && p2Hp <= 0) { triggerDraw(); return; }
+
+            if (guess > secretNumber) {
+                if (guess <= high) high = guess - 1;
+                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${playerName}: ${guess} is <b>TOO HIGH!</b>`;
+            } else {
+                if (guess >= low) low = guess + 1;
+                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${playerName}: ${guess} is <b>TOO LOW!</b>`;
+            }
+
+            updateBoard();
+            
+            if (currentMode === 'pvp') {
+                activePlayer = activePlayer === 1 ? 2 : 1;
+                if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2;
+                if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
+                playerName = activePlayer === 1 ? "Player 1" : "Player 2";
+                messageEl.innerHTML += `<br><br><b>${playerName}'s</b> Turn!`;
+                highlightTurn(); userInput.value = ''; enableUser(true);
+            } else {
+                enableUser(false); activePlayer = 2; highlightTurn();
+                setTimeout(robotTurn, 1200);
+            }
+        }
+
+        // --- THE 3 AI BRAINS ---
+        function calculateRobotGuess() {
+            if (currentDifficulty === 'easy') {
+                // Easy: The Drunk Robot (Random)
+                return Math.floor(Math.random() * (high - low + 1)) + low;
+            } 
+            else if (currentDifficulty === 'normal') {
+                // Normal: The Calculator (Binary Search)
+                return Math.floor((low + high) / 2);
+            } 
+            else {
+                // Hard: The Mind Reader (Traps + Golden Ratio)
+                // 1. Check Psychological Traps
+                const traps = [69, 73, 42, 37, 7, 99, 333, 420];
+                for (let t of traps) {
+                    if (t >= low && t <= high && Math.random() > 0.4) return t;
+                }
+                // 2. Golden Section Search (Highly unpredictable, aggressive shrinking)
+                let range = high - low;
+                return Math.random() > 0.5 
+                    ? low + Math.floor(range * 0.618) 
+                    : low + Math.floor(range * 0.382);
+            }
+        }
+
+        function robotTurn() {
+            if (p2Hp <= 0 && p1Hp > 0) {
+                 messageEl.innerHTML = "I am out of HP... You get a free turn!";
+                 activePlayer = 1; highlightTurn(); enableUser(true); return;
+            }
+
+            emojiDisplay.innerText = '🧠'; playSound('guess');
+            
+            setTimeout(() => {
+                let robotGuess = calculateRobotGuess();
+
+                if (robotGuess === secretNumber) { triggerWin("The Robot", robotGuess); return; }
+
+                p2Hp--; updateHealth(); shakeScreen(); playSound('error');
+                if (p1Hp <= 0 && p2Hp <= 0) { triggerDraw(); return; }
+
+                if (robotGuess > secretNumber) {
+                    if (robotGuess <= high) high = robotGuess - 1;
+                    emojiDisplay.innerText = '🤖'; messageEl.innerHTML = `I guessed <b>${robotGuess}</b>... <b>TOO HIGH!</b>`;
+                } else {
+                    if (robotGuess >= low) low = robotGuess + 1;
+                    emojiDisplay.innerText = '🤖'; messageEl.innerHTML = `I guessed <b>${robotGuess}</b>... <b>TOO LOW!</b>`;
+                }
+
+                updateBoard();
+
+                if (p1Hp > 0) {
+                    activePlayer = 1; highlightTurn();
+                    messageEl.innerHTML += `<br><br><b>Player 1</b>, your turn!`; enableUser(true);
+                } else {
+                    messageEl.innerHTML += "<br>You have no HP! I get a free turn!";
+                    setTimeout(robotTurn, 1500);
+                }
+            }, 1000);
+        }
+
+        // --- END STATE ---
+        function triggerWin(winner, number) {
+            playSound('win'); startConfetti(); emojiDisplay.innerText = winner === "The Robot" ? '👑' : '🎉';
+            messageEl.innerHTML = `<b>${winner}</b> hit <span class="number-highlight">${number}</span>!<br><b>${winner} WINS!</b>`;
+            endGame();
+        }
+
+        function triggerDraw() {
+            playSound('error'); emojiDisplay.innerText = '☠️';
+            messageEl.innerHTML = `Both ran out of HP! The number was <b>${secretNumber}</b>.`;
+            endGame();
+        }
+
+        function endGame() {
+            controlsEl.style.display = 'none'; setupControls.style.display = 'flex';
+            setupControls.querySelector('.btn-start').innerText = 'Play Again';
+        }
+
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter" && !submitBtn.disabled) { e.preventDefault(); submitBtn.click(); }
+        });
+
+        // --- CONFETTI ---
+        const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d");
+        let particles = []; let confettiActive = false;
+
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener("resize", resizeCanvas); resizeCanvas();
+
+        function startConfetti() {
+            confettiActive = true; particles = [];
+            for (let i = 0; i < 150; i++) particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height, r: Math.random() * 6 + 4, dx: Math.random() * 4 - 2, dy: Math.random() * 5 + 2, color: `hsl(${Math.random() * 360}, 100%, 50%)`, tilt: Math.random() * 10 - 10 });
+            requestAnimationFrame(drawConfetti); setTimeout(() => { confettiActive = false; }, 4000);
+        }
+
+        function drawConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); let activeParticles = 0;
+            particles.forEach((p) => { p.y += p.dy; p.x += p.dx; p.tilt += 0.1; if (p.y < canvas.height) activeParticles++;
+                ctx.beginPath(); ctx.lineWidth = p.r; ctx.strokeStyle = p.color; ctx.moveTo(p.x + p.tilt + p.r, p.y); ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r); ctx.stroke(); });
+            if (activeParticles > 0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    </script>
+</body>
+</html>
