@@ -3,287 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Number Battle - Game Master Mode</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
-            color: #333;
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        .game-app {
-            background: white;
-            width: 95%;
-            max-width: 400px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        /* Status & Messages */
-        .status-board {
-            background: #edf2f7;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            color: #4a5568;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .message-box {
-            font-size: 18px;
-            margin-bottom: 20px;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .highlight {
-            font-size: 24px;
-            font-weight: bold;
-            color: #d53f8c;
-            margin: 0 5px;
-        }
-
-        /* --- GUESSER UI (VIRTUAL KEYBOARD) --- */
-        .guesser-ui {
-            display: none; /* Hidden until game starts */
-            flex-direction: column;
-        }
-
-        .virtual-display {
-            background: #e2e8f0;
-            border: 2px solid #cbd5e0;
-            border-radius: 10px;
-            height: 50px;
-            font-size: 28px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            color: #2d3748;
-        }
-
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-
-        .numpad button {
-            background: #4a5568;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 15px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            touch-action: manipulation; /* Optimizes for fast mobile tapping */
-        }
-
-        .numpad button:active { transform: scale(0.95); background: #2d3748; }
-        .numpad .btn-del { background: #718096; }
-        .numpad .btn-submit { background: #3182ce; grid-column: span 2; }
-
-        /* --- JUDGE UI (HIGH/LOW BUTTONS) --- */
-        .judge-ui {
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .judge-btn {
-            border: none;
-            border-radius: 15px;
-            padding: 20px;
-            font-size: 20px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-        }
-        
-        .judge-btn:active { transform: scale(0.98); }
-        .btn-high { background: #e53e3e; } /* Red */
-        .btn-low { background: #dd6b20; }  /* Orange */
-        .btn-correct { background: #38a169; } /* Green */
-
-        /* Setup UI */
-        .btn-start {
-            background: #38a169;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            width: 100%;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f2027">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Ultimate Number Battle</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <canvas id="confetti"></canvas>
+    
+    <div class="game-card" id="game-card">
+        <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">🔊</button>
+        <div class="emoji-display" id="emoji-display">📱</div>
+        <div class="speech-bubble" id="message">Select your mode and AI level!</div>
 
-    <div class="game-app">
-        <div class="status-board">
-            <span>Min: <span id="min-val">1</span></span>
-            <span>Max: <span id="max-val">100</span></span>
-        </div>
-
-        <div class="message-box" id="message">
-            <b>Player 1:</b> Think of a secret number between 1 and 100.
-        </div>
-
-        <button class="btn-start" id="start-btn" onclick="startGame()">I have my number! Start Game</button>
-
-        <div class="guesser-ui" id="guesser-ui">
-            <div class="virtual-display" id="guess-display"></div>
-            <div class="numpad">
-                <button onclick="pressKey('1')">1</button>
-                <button onclick="pressKey('2')">2</button>
-                <button onclick="pressKey('3')">3</button>
-                <button onclick="pressKey('4')">4</button>
-                <button onclick="pressKey('5')">5</button>
-                <button onclick="pressKey('6')">6</button>
-                <button onclick="pressKey('7')">7</button>
-                <button onclick="pressKey('8')">8</button>
-                <button onclick="pressKey('9')">9</button>
-                <button class="btn-del" onclick="deleteKey()">⌫</button>
-                <button onclick="pressKey('0')">0</button>
-                <button class="btn-submit" onclick="submitGuess()">GUESS</button>
+        <div class="setup" id="setup-menu">
+            <div class="profile-card">
+                <div style="display:flex; gap:5px;">
+                    <select id="avatar-input" style="width: 25%; margin-bottom:0;" onchange="saveProfile()">
+                        <option value="🧑">🧑</option><option value="🐱">🐱</option><option value="🤖">🤖</option><option value="👽">👽</option>
+                    </select>
+                    <input type="text" id="username-input" style="width: 75%; margin-bottom:0;" placeholder="Your Name" onchange="saveProfile()">
+                </div>
+                <div class="stats-grid" style="margin-top: 5px;">
+                    <div>Local Wins: <span id="stat-local-win">0</span></div>
+                    <div>Online Wins: <span id="stat-online-win">0</span></div>
+                </div>
             </div>
+            
+            <select id="game-mode">
+                <option value="pve">Mode 1: You Guess Robot's Number</option>
+                <option value="reverse">Mode 2: You Judge Robot's Guesses</option>
+                <option value="pvp">Mode 3: Local Pass & Play (2 Player)</option>
+            </select>
+
+            <select id="difficulty">
+                <option value="easy">Easy (1-50) | Random AI</option>
+                <option value="normal" selected>Normal (1-100) | Binary AI</option>
+                <option value="hard">Hard (1-500) | Golden Ratio AI</option>
+                <option value="expert">Expert (1-1000) | Interpolation AI</option>
+            </select>
+
+            <button class="btn-blue" onclick="startGame()">Start Local Game</button>
+            <button class="btn-green" onclick="showOnlineLobby()">Play Online (P2P)</button>
         </div>
 
-        <div class="judge-ui" id="judge-ui">
-            <button class="judge-btn btn-high" onclick="judgeGuess('high')">Too High ⬇️</button>
-            <button class="judge-btn btn-low" onclick="judgeGuess('low')">Too Low ⬆️</button>
-            <button class="judge-btn btn-correct" onclick="judgeGuess('correct')">Correct! 🎉</button>
+        <div class="online-lobby" id="online-lobby">
+            <button class="btn-blue" onclick="hostOnlineGame()">Create Room</button>
+            <div id="room-code-display" style="display:none;">Code:<div class="room-code" id="my-code">----</div></div>
+            <hr style="width: 100%; border: 1px solid #e2e8f0; margin: 5px 0;">
+            <input type="text" id="join-code" placeholder="Enter 4-Digit Code" maxlength="4">
+            <button class="btn-green" onclick="joinOnlineGame()">Join Room</button>
+            <button class="btn-gray" onclick="cancelOnline()">Back</button>
         </div>
 
+        <div class="health-section" id="health-section">
+            <div class="health-box" id="p1-box"><span id="p1-label">P1</span> (<span id="p1-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div></div>
+            <div class="health-box" id="p2-box"><span id="p2-label">P2</span> (<span id="p2-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div></div>
+        </div>
+
+        <div class="status-board" id="status-board">
+            <span>Min: <span id="min-display">1</span></span>
+            <span>Max: <span id="max-display">100</span></span>
+        </div>
+
+        <div class="battle-log" id="battle-log"></div>
+
+        <div class="controls" id="controls">
+            <div id="input-controls" style="display:flex; flex-direction:column;">
+                <div class="fake-input" id="user-input-display"></div>
+                <div class="numpad">
+                    <button onclick="numPress('1')">1</button><button onclick="numPress('2')">2</button><button onclick="numPress('3')">3</button>
+                    <button onclick="numPress('4')">4</button><button onclick="numPress('5')">5</button><button onclick="numPress('6')">6</button>
+                    <button onclick="numPress('7')">7</button><button onclick="numPress('8')">8</button><button onclick="numPress('9')">9</button>
+                    <button class="btn-gray" onclick="numDel()">⌫</button><button onclick="numPress('0')">0</button><button class="btn-red" id="submit-btn" onclick="handleUserGuess()">GUESS</button>
+                </div>
+            </div>
+
+            <div class="feedback-controls" id="feedback-controls">
+                <button class="btn-blue" onclick="manualFeedback('H')">Too High ⬇️</button>
+                <button class="btn-blue" onclick="manualFeedback('L')">Too Low ⬆️</button>
+                <button class="btn-correct" onclick="manualFeedback('C')">Correct! ✅</button>
+            </div>
+
+            <button class="btn-blue" id="menu-btn" style="display:none; margin-top:10px;" onclick="location.reload()">Back to Menu</button>
+        </div>
     </div>
 
     <script>
-        // Game Variables
-        let minRange = 1;
-        let maxRange = 100;
-        let currentGuessString = "";
-        let pendingGuess = 0;
-
-        // UI Elements
-        const messageEl = document.getElementById("message");
-        const startBtn = document.getElementById("start-btn");
-        const guesserUi = document.getElementById("guesser-ui");
-        const judgeUi = document.getElementById("judge-ui");
-        const displayEl = document.getElementById("guess-display");
-        const minValEl = document.getElementById("min-val");
-        const maxValEl = document.getElementById("max-val");
-
-        // Start the game
-        function startGame() {
-            minRange = 1;
-            maxRange = 100;
-            updateBoard();
-            
-            startBtn.style.display = "none";
-            switchToGuesserTurn();
-        }
-
-        function updateBoard() {
-            minValEl.innerText = minRange;
-            maxValEl.innerText = maxRange;
-        }
-
-        // --- PLAYER 2: VIRTUAL KEYBOARD LOGIC ---
-        function pressKey(num) {
-            if (currentGuessString.length < 3) { // Prevent typing numbers longer than 3 digits
-                currentGuessString += num;
-                displayEl.innerText = currentGuessString;
-            }
-        }
-
-        function deleteKey() {
-            currentGuessString = currentGuessString.slice(0, -1);
-            displayEl.innerText = currentGuessString;
-        }
-
-        function submitGuess() {
-            if (currentGuessString === "") return;
-            
-            pendingGuess = parseInt(currentGuessString);
-            
-            // Validation
-            if (pendingGuess < minRange || pendingGuess > maxRange) {
-                alert(`Please guess a number between ${minRange} and ${maxRange}.`);
-                currentGuessString = "";
-                displayEl.innerText = "";
-                return;
-            }
-
-            // Switch UI to Player 1 (The Judge)
-            switchToJudgeTurn();
-        }
-
-        // --- PLAYER 1: JUDGE LOGIC ---
-        function judgeGuess(feedback) {
-            if (feedback === 'high') {
-                maxRange = pendingGuess - 1;
-                switchToGuesserTurn(`Player 1 says ${pendingGuess} is <b>TOO HIGH</b>.`);
-            } 
-            else if (feedback === 'low') {
-                minRange = pendingGuess + 1;
-                switchToGuesserTurn(`Player 1 says ${pendingGuess} is <b>TOO LOW</b>.`);
-            } 
-            else if (feedback === 'correct') {
-                endGameWin();
-            }
-        }
-
-        // --- UI SWITCHING HELPERS ---
-        function switchToGuesserTurn(optionalPrefix = "") {
-            guesserUi.style.display = "flex";
-            judgeUi.style.display = "none";
-            currentGuessString = "";
-            displayEl.innerText = "";
-            updateBoard();
-
-            // Catch contradiction cheating!
-            if (minRange > maxRange) {
-                messageEl.innerHTML = "<b>Player 1 cheated!</b> The hints contradict each other. Game Over.";
-                guesserUi.style.display = "none";
-                startBtn.style.display = "block";
-                startBtn.innerText = "Restart Game";
-                return;
-            }
-
-            messageEl.innerHTML = `${optionalPrefix}<br><b>Player 2:</b> Enter your guess!`;
-        }
-
-        function switchToJudgeTurn() {
-            guesserUi.style.display = "none";
-            judgeUi.style.display = "flex";
-            messageEl.innerHTML = `Player 2 guessed: <span class="highlight">${pendingGuess}</span><br><b>Player 1:</b> Is this correct?`;
-        }
-
-        function endGameWin() {
-            judgeUi.style.display = "none";
-            messageEl.innerHTML = `🎉 <b>PLAYER 2 WINS!</b> 🎉<br>The secret number was <span class="highlight">${pendingGuess}</span>!`;
-            startBtn.style.display = "block";
-            startBtn.innerText = "Play Again";
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(() => console.log('PWA Ready!'));
         }
     </script>
+    <script src="script.js"></script>
 </body>
 </html>
