@@ -1,10 +1,10 @@
 // --- GLOBAL VARIABLES ---
 let secretNumber, low, high, p1Hp, p2Hp, currentMode, aiLevel;
 let maxGuesses = 7; 
-let maxRange = 100; // Locked to 1-100!
+let maxRange = 100; // Locked strictly to 1-100 per your instructions
 let activePlayer = 1; 
 let currentGuessString = "";
-let pendingManualGuess = 0; // Stores P2's guess while P1 judges it
+let pendingManualGuess = 0; 
 let isMuted = false;
 
 // Networking Variables
@@ -64,7 +64,7 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'Backspace') numDel();
         else if (e.key === 'Enter') document.getElementById('submit-btn').click();
     } 
-    else if (feedbackVisible) {
+    else if (feedbackVisible && isMyTurn) {
         if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'h') manualFeedback('H');
         else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'l') manualFeedback('L');
         else if (e.key === 'Enter' || e.key.toLowerCase() === 'c') manualFeedback('C');
@@ -82,12 +82,14 @@ function generateRoomCode() { return Math.random().toString(36).substring(2, 6).
 const peerConfig = { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
 function hostOnlineGame() {
-    saveProfile(); aiLevel = diffSelect.value; const rc = generateRoomCode(); document.getElementById('my-code').innerText = rc; document.getElementById('room-code-display').style.display = 'block';
+    saveProfile(); aiLevel = diffSelect.value; currentMode = document.getElementById('game-mode').value;
+    const rc = generateRoomCode(); document.getElementById('my-code').innerText = rc; document.getElementById('room-code-display').style.display = 'block';
     peer = new Peer('numbattle-' + rc, peerConfig);
     peer.on('connection', (c) => {
-        conn = c; setupNet(); isOnline = true; currentMode = 'online'; myPlayerId = 1; 
+        conn = c; setupNet(); isOnline = true; myPlayerId = 1; 
         secretNumber = Math.floor(Math.random() * maxRange) + 1; 
-        conn.on('open', () => { conn.send({ type: 'START', secret: secretNumber, name: userProfile.username, av: userProfile.avatar }); initGame("Connected!"); });
+        // We sync the exact game mode the Host chose so the Guest's UI matches perfectly
+        conn.on('open', () => { conn.send({ type: 'START', secret: secretNumber, mode: currentMode, name: userProfile.username, av: userProfile.avatar }); initGame("Connected!"); });
     });
 }
 
@@ -100,27 +102,34 @@ function joinOnlineGame() {
 function setupNet() {
     conn.on('data', (d) => {
         if (d.type === 'START') { 
-            isOnline = true; currentMode = 'online'; myPlayerId = 2; secretNumber = d.secret; 
+            isOnline = true; myPlayerId = 2; secretNumber = d.secret; currentMode = d.mode; // Guest locks into Host's mode
             initGame("Connected!"); document.getElementById('p1-label').innerText = `${d.av} ${d.name}`; 
             conn.send({ type: 'SYNC', name: userProfile.username, av: userProfile.avatar }); 
         } 
         else if (d.type === 'GUESS') processGuess(d.p, d.val);
         else if (d.type === 'SYNC') { document.getElementById('p2-label').innerText = `${d.av} ${d.name}`; }
+        // NEW: Network pipeline for True PvP Mode
+        else if (d.type === 'MANUAL_GUESS') {
+            pendingManualGuess = d.val;
+            activePlayer = 1; // It is now Host's turn to judge
+            document.getElementById('input-controls').style.display = 'none';
+            document.getElementById('feedback-controls').style.display = 'grid';
+            document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
+            msgEl.innerHTML = `Opponent guessed <span class="highlight">${d.val}</span>.<br><b>You:</b> Is this Too High, Too Low, or Correct?`;
+        }
+        else if (d.type === 'MANUAL_FEEDBACK') {
+            applyManualFeedback(d.fb, d.val);
+        }
     });
     conn.on('close', () => { alert("Disconnected!"); location.reload(); });
 }
 
-// --- GAME LOGIC ---
+// --- GAME LOGIC INITIALIZATION ---
 function startGame() {
     saveProfile(); aiLevel = diffSelect.value;
     currentMode = document.getElementById('game-mode').value; isOnline = false; myPlayerId = 1;
     secretNumber = Math.floor(Math.random() * maxRange) + 1; // Used for PvE
-    
-    let startMsg = "Game Started!";
-    if (currentMode === 'reverse') startMsg = `Think of a number (1-${maxRange}). I will guess it!`;
-    if (currentMode === 'pvp_manual') startMsg = `<b>Player 1:</b> Think of a number (1-${maxRange}).<br><b>Player 2:</b> You guess first!`;
-
-    initGame(startMsg);
+    initGame("Game Started!");
 }
 
 function initGame(msg) {
@@ -132,20 +141,37 @@ function initGame(msg) {
     if (currentMode === 'pvp_manual') document.getElementById('p2-label').innerText = "🧑 P2 (Guesser)";
     else document.getElementById('p2-label').innerText = (isOnline && myPlayerId === 2 ? `${userProfile.avatar} YOU` : "🤖 Robot");
     
-    updateUI(); msgEl.innerHTML = msg;
+    updateUI(); 
 
+    // Specific UI setups based on the 3 modes
     if (currentMode === 'reverse') {
+        msgEl.innerHTML = `Think of a number (1-${maxRange}). I will guess it!`;
         document.getElementById('input-controls').style.display = 'none';
         document.getElementById('feedback-controls').style.display = 'grid';
         activePlayer = 2; updateUI(); setTimeout(robotTurnReverse, 1500);
     } 
     else if (currentMode === 'pvp_manual') {
-        document.getElementById('input-controls').style.display = 'flex';
-        document.getElementById('feedback-controls').style.display = 'none';
-        activePlayer = 2; // In manual mode, P2 (the guesser) acts first
+        activePlayer = 2; // P2 always acts first in True PvP
         updateUI();
+        if (isOnline) {
+            if (myPlayerId === 1) { // Host waits
+                document.getElementById('input-controls').style.display = 'none';
+                document.getElementById('feedback-controls').style.display = 'none';
+                msgEl.innerHTML = `<b>Game Master:</b> Think of a number (1-${maxRange}). Waiting for opponent to guess...`;
+            } else { // Guest guesses
+                document.getElementById('input-controls').style.display = 'flex';
+                document.getElementById('feedback-controls').style.display = 'none';
+                msgEl.innerHTML = `<b>Player 2:</b> You are guessing! Enter a number.`;
+            }
+        } else { // Local play
+            document.getElementById('input-controls').style.display = 'flex';
+            document.getElementById('feedback-controls').style.display = 'none';
+            msgEl.innerHTML = `<b>P1:</b> Think of a number.<br><b>P2:</b> Type your first guess!`;
+        }
     }
     else {
+        // Standard PvE or Standard Online Auto-PvP
+        msgEl.innerHTML = msg;
         document.getElementById('input-controls').style.display = 'flex';
         document.getElementById('feedback-controls').style.display = 'none';
     }
@@ -160,26 +186,36 @@ function updateUI() {
     if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn'); else document.getElementById('p2-box').classList.add('active-turn');
 }
 
+// --- GUESSING LOGIC ---
 function handleUserGuess() {
     let g = parseInt(currentGuessString); if (isNaN(g) || g < low || g > high) return alert(`Guess between ${low} and ${high}!`);
     clearNumpad(); playSound('guess');
 
-    // If we are in True PvP, P2 guessing triggers P1's Judge Buttons
+    // Special interception for True PvP Mode
     if (currentMode === 'pvp_manual') {
         pendingManualGuess = g;
-        document.getElementById('input-controls').style.display = 'none';
-        document.getElementById('feedback-controls').style.display = 'grid';
-        activePlayer = 1; // Switch turn to P1 to judge
-        updateUI();
-        msgEl.innerHTML = `P2 guessed <span class="highlight">${g}</span>.<br><b>Player 1:</b> Is this Too High, Too Low, or Correct?`;
-        return;
+        if (isOnline) {
+            conn.send({ type: 'MANUAL_GUESS', val: g });
+            document.getElementById('input-controls').style.display = 'none';
+            msgEl.innerHTML = `You guessed <span class="highlight">${g}</span>. Waiting for Host to judge...`;
+            return;
+        } else {
+            // Local Pass-and-Play
+            document.getElementById('input-controls').style.display = 'none';
+            document.getElementById('feedback-controls').style.display = 'grid';
+            document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
+            activePlayer = 1; updateUI();
+            msgEl.innerHTML = `P2 guessed <span class="highlight">${g}</span>.<br><b>Player 1:</b> Is this Too High, Too Low, or Correct?`;
+            return;
+        }
     }
 
+    // Standard Modes
     if (isOnline) conn.send({ type: 'GUESS', p: myPlayerId, val: g }); 
     processGuess(activePlayer, g);
 }
 
-// Evaluates PvE and Online guesses automatically
+// Automatic processing for Standard Modes
 function processGuess(p, g) {
     let n = p === 1 ? "P1" : "P2";
     if (g === secretNumber) { triggerWin(p); return; }
@@ -195,38 +231,48 @@ function processGuess(p, g) {
     updateUI(); if (currentMode === 'pve' && activePlayer === 2) setTimeout(robotTurn, 1000); 
 }
 
-// Handles manual feedback (Reverse Mode OR True PvP Mode)
+// --- TRUE PVP & REVERSE MANUAL JUDGING ---
 function manualFeedback(t) {
     document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = true);
     
-    // 1. True PvP Mode Logic
     if (currentMode === 'pvp_manual') {
-        if (t === 'C') { triggerWin(2); return; } // P2 guessed P1's number correctly
-        
-        p2Hp--; // P2 loses health for guessing wrong
-        updateUI(); triggerDamage();
-        if (p2Hp <= 0) { triggerDraw(); return; } // P2 ran out of health
+        if (isOnline) {
+            conn.send({ type: 'MANUAL_FEEDBACK', fb: t, val: pendingManualGuess });
+            document.getElementById('feedback-controls').style.display = 'none';
+            msgEl.innerHTML = "Feedback sent! Waiting for opponent's next guess...";
+        }
+        applyManualFeedback(t, pendingManualGuess);
+    } 
+    else if (currentMode === 'reverse') {
+        // Reverse mode logic (You judge Robot)
+        if (t === 'C') { triggerWin(2); return; }
+        p1Hp--; updateUI(); triggerDamage();
+        if (p1Hp <= 0) { triggerDraw(); return; }
+        if (t === 'H') { high = robotGuess - 1; appendLog(`Robot: ${robotGuess} (HIGH)`, 'log-p2'); } 
+        else if (t === 'L') { low = robotGuess + 1; appendLog(`Robot: ${robotGuess} (LOW)`, 'log-p2'); }
+        updateUI(); setTimeout(robotTurnReverse, 1000);
+    }
+}
 
-        if (t === 'H') { high = pendingManualGuess - 1; appendLog(`P2: ${pendingManualGuess} (HIGH)`, 'log-p2'); } 
-        else if (t === 'L') { low = pendingManualGuess + 1; appendLog(`P2: ${pendingManualGuess} (LOW)`, 'log-p2'); }
-        
-        // Pass phone back to P2
-        activePlayer = 2;
-        updateUI();
+// Shared logic for applying manual PvP feedback
+function applyManualFeedback(t, guessVal) {
+    if (t === 'C') { triggerWin(2); return; } // P2 guessed correctly!
+    
+    p2Hp--; updateUI(); triggerDamage();
+    if (p2Hp <= 0) { triggerWin(1); return; } // EXPERT FIX: If P2 runs out of HP, P1 wins!
+
+    if (t === 'H') { high = guessVal - 1; appendLog(`P2: ${guessVal} (HIGH)`, 'log-p2'); } 
+    else if (t === 'L') { low = guessVal + 1; appendLog(`P2: ${guessVal} (LOW)`, 'log-p2'); }
+    
+    activePlayer = 2; // Pass turn back to guesser
+    updateUI();
+
+    // Show input pad only to the local guesser OR the online Guest
+    if (!isOnline || (isOnline && myPlayerId === 2)) {
         document.getElementById('input-controls').style.display = 'flex';
         document.getElementById('feedback-controls').style.display = 'none';
         msgEl.innerHTML = `<b>Player 2:</b> Enter your next guess!`;
-        document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
-        return;
     }
-
-    // 2. Reverse Mode Logic (You Judge Robot)
-    if (t === 'C') { triggerWin(2); return; }
-    p1Hp--; updateUI(); triggerDamage();
-    if (p1Hp <= 0) { triggerDraw(); return; }
-    if (t === 'H') { high = robotGuess - 1; appendLog(`Robot: ${robotGuess} (HIGH)`, 'log-p2'); } 
-    else if (t === 'L') { low = robotGuess + 1; appendLog(`Robot: ${robotGuess} (LOW)`, 'log-p2'); }
-    updateUI(); setTimeout(robotTurnReverse, 1000);
 }
 
 // --- ADVANCED AI ENGINE ---
