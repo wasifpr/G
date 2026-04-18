@@ -39,15 +39,15 @@ function playSound(type) {
     else if (type === 'win') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
 }
 
-// --- DOM ELEMENTS (CRASH-PROOFED) ---
+// --- DOM ELEMENTS ---
 const msgEl = document.getElementById('message'); const setupMenu = document.getElementById('setup-menu');
 const onlineLobby = document.getElementById('online-lobby'); const controlsEl = document.getElementById('controls');
 const healthSec = document.getElementById('health-section'); const statusBd = document.getElementById('status-board');
 const bLog = document.getElementById('battle-log'); const inputDisp = document.getElementById('user-input-display');
 const gameCard = document.getElementById('game-card'); 
 
-// Safely grabs the dropdown regardless of which HTML file you are using
-const diffSelect = document.getElementById('ai-algorithm') || document.getElementById('difficulty');
+// Safely grabs the dropdown
+const diffSelect = document.getElementById('ai-algorithm');
 
 // --- VIRTUAL NUMPAD & DESKTOP KEYBOARD ---
 function numPress(val) { 
@@ -96,8 +96,7 @@ function hostOnlineGame() {
         
         peer = new Peer('numbattle-' + rc, peerConfig);
         
-        // Catch network errors (like adblockers or strict firewalls)
-        peer.on('error', (err) => { alert("Network Error: " + err.type + ". Please refresh or check your connection."); });
+        peer.on('error', (err) => { alert("Network Error: " + err.type); });
 
         peer.on('connection', (c) => {
             conn = c; setupNet(); isOnline = true; myPlayerId = 1; 
@@ -113,8 +112,7 @@ function hostOnlineGame() {
 function joinOnlineGame() {
     saveProfile(); let code = document.getElementById('join-code').value.toUpperCase(); if(code.length !== 4) return alert("Invalid Code");
     msgEl.innerHTML = "Connecting..."; peer = new Peer(null, peerConfig); 
-    
-    peer.on('error', (err) => { alert("Connection Failed. Check the Room Code and try again."); });
+    peer.on('error', (err) => { alert("Connection Failed. Check Code."); });
     peer.on('open', () => { conn = peer.connect('numbattle-' + code); setupNet(); });
 }
 
@@ -128,31 +126,25 @@ function setupNet() {
         else if (d.type === 'GUESS') processGuess(d.p, d.val);
         else if (d.type === 'SYNC') { document.getElementById('p2-label').innerText = `${d.av} ${d.name}`; }
         else if (d.type === 'MANUAL_GUESS') {
-            pendingManualGuess = d.val;
-            activePlayer = 1; 
+            pendingManualGuess = d.val; activePlayer = 1; 
             document.getElementById('input-controls').style.display = 'none';
             document.getElementById('feedback-controls').style.display = 'grid';
             document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
             msgEl.innerHTML = `Opponent guessed <span class="highlight">${d.val}</span>.<br><b>You:</b> Is this Too High, Too Low, or Correct?`;
         }
-        else if (d.type === 'MANUAL_FEEDBACK') {
-            applyManualFeedback(d.fb, d.val);
-        }
+        else if (d.type === 'MANUAL_FEEDBACK') applyManualFeedback(d.fb, d.val);
     });
     conn.on('close', () => { alert("Disconnected!"); location.reload(); });
 }
 
 // --- GAME LOGIC INITIALIZATION ---
 function startGame() {
-    saveProfile(); 
-    aiLevel = diffSelect ? diffSelect.value : 'normal';
+    saveProfile(); aiLevel = diffSelect ? diffSelect.value : 'normal';
     currentMode = document.getElementById('game-mode').value; isOnline = false; myPlayerId = 1;
     secretNumber = Math.floor(Math.random() * maxRange) + 1; 
-    
     let startMsg = "Game Started!";
     if (currentMode === 'reverse') startMsg = `Think of a number (1-${maxRange}). I will guess it!`;
     if (currentMode === 'pvp_manual') startMsg = `<b>Player 1:</b> Think of a number (1-${maxRange}).<br><b>Player 2:</b> You guess first!`;
-
     initGame(startMsg);
 }
 
@@ -161,49 +153,37 @@ function initGame(msg) {
     low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; activePlayer = 1; clearNumpad();
     
     document.getElementById('p1-label').innerText = `${userProfile.avatar} ` + (isOnline && myPlayerId !== 1 ? "Opponent" : userProfile.username);
-    
     if (currentMode === 'pvp_manual') document.getElementById('p2-label').innerText = "🧑 P2 (Guesser)";
     else document.getElementById('p2-label').innerText = (isOnline && myPlayerId === 2 ? `${userProfile.avatar} YOU` : "🤖 Robot");
     
     updateUI(); msgEl.innerHTML = msg;
 
     if (currentMode === 'reverse') {
-        document.getElementById('input-controls').style.display = 'none';
-        document.getElementById('feedback-controls').style.display = 'grid';
+        document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'grid';
         activePlayer = 2; updateUI(); setTimeout(robotTurnReverse, 1500);
     } 
     else if (currentMode === 'pvp_manual') {
-        activePlayer = 2; // P2 always acts first in True PvP
-        updateUI();
+        activePlayer = 2; updateUI();
         if (isOnline) {
-            if (myPlayerId === 1) { // Host waits
-                document.getElementById('input-controls').style.display = 'none';
-                document.getElementById('feedback-controls').style.display = 'none';
-                msgEl.innerHTML = `<b>Game Master:</b> Think of a number (1-${maxRange}). Waiting for opponent to guess...`;
-            } else { // Guest guesses
-                document.getElementById('input-controls').style.display = 'flex';
-                document.getElementById('feedback-controls').style.display = 'none';
+            if (myPlayerId === 1) { 
+                document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'none';
+                msgEl.innerHTML = `<b>Game Master:</b> Think of a number (1-${maxRange}). Waiting for opponent...`;
+            } else { 
+                document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none';
                 msgEl.innerHTML = `<b>Player 2:</b> You are guessing! Enter a number.`;
             }
-        } else { // Local play
-            document.getElementById('input-controls').style.display = 'flex';
-            document.getElementById('feedback-controls').style.display = 'none';
+        } else { 
+            document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none';
             msgEl.innerHTML = `<b>P1:</b> Think of a number.<br><b>P2:</b> Type your first guess!`;
         }
     }
-    else {
-        // Standard PvE or Standard Online Auto-PvP
-        msgEl.innerHTML = msg;
-        document.getElementById('input-controls').style.display = 'flex';
-        document.getElementById('feedback-controls').style.display = 'none';
-    }
+    else { document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none'; }
 }
 
 function updateUI() {
     document.getElementById('min-display').innerText = low; document.getElementById('max-display').innerText = high;
     document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp;
     document.getElementById('p1-hp-bar').style.width = `${(p1Hp/maxGuesses)*100}%`; document.getElementById('p2-hp-bar').style.width = `${(p2Hp/maxGuesses)*100}%`;
-    
     document.getElementById('p1-box').classList.remove('active-turn'); document.getElementById('p2-box').classList.remove('active-turn');
     if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn'); else document.getElementById('p2-box').classList.add('active-turn');
 }
@@ -213,7 +193,6 @@ function handleUserGuess() {
     let g = parseInt(currentGuessString); if (isNaN(g) || g < low || g > high) return alert(`Guess between ${low} and ${high}!`);
     clearNumpad(); playSound('guess');
 
-    // Special interception for True PvP Mode
     if (currentMode === 'pvp_manual') {
         pendingManualGuess = g;
         if (isOnline) {
@@ -222,32 +201,23 @@ function handleUserGuess() {
             msgEl.innerHTML = `You guessed <span class="highlight">${g}</span>. Waiting for Host to judge...`;
             return;
         } else {
-            // Local Pass-and-Play
-            document.getElementById('input-controls').style.display = 'none';
-            document.getElementById('feedback-controls').style.display = 'grid';
+            document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'grid';
             document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
-            activePlayer = 1; updateUI();
-            msgEl.innerHTML = `P2 guessed <span class="highlight">${g}</span>.<br><b>Player 1:</b> Is this Too High, Too Low, or Correct?`;
+            activePlayer = 1; updateUI(); msgEl.innerHTML = `P2 guessed <span class="highlight">${g}</span>.<br><b>Player 1:</b> Is this Too High, Too Low, or Correct?`;
             return;
         }
     }
-
-    // Standard Modes
     if (isOnline) conn.send({ type: 'GUESS', p: myPlayerId, val: g }); 
     processGuess(activePlayer, g);
 }
 
-// Automatic processing for Standard Modes
 function processGuess(p, g) {
     let n = p === 1 ? "P1" : "P2";
     if (g === secretNumber) { triggerWin(p); return; }
-    if (p === 1) p1Hp--; else p2Hp--;
-    updateUI(); triggerDamage();
+    if (p === 1) p1Hp--; else p2Hp--; updateUI(); triggerDamage();
     if (p1Hp <= 0 && p2Hp <= 0) { triggerDraw(); return; }
-
     if (g > secretNumber) { high = g - 1; msgEl.innerHTML = `${n} guessed ${g}. <b>TOO HIGH!</b>`; appendLog(`${n}: ${g} (HIGH)`, 'log-p1'); } 
     else { low = g + 1; msgEl.innerHTML = `${n} guessed ${g}. <b>TOO LOW!</b>`; appendLog(`${n}: ${g} (LOW)`, 'log-p1'); }
-    
     activePlayer = activePlayer === 1 ? 2 : 1;
     if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2; if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
     updateUI(); if (currentMode === 'pve' && activePlayer === 2) setTimeout(robotTurn, 1000); 
@@ -256,18 +226,12 @@ function processGuess(p, g) {
 // --- TRUE PVP & REVERSE MANUAL JUDGING ---
 function manualFeedback(t) {
     document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = true);
-    
     if (currentMode === 'pvp_manual') {
-        if (isOnline) {
-            conn.send({ type: 'MANUAL_FEEDBACK', fb: t, val: pendingManualGuess });
-            document.getElementById('feedback-controls').style.display = 'none';
-            msgEl.innerHTML = "Feedback sent! Waiting for opponent's next guess...";
-        }
+        if (isOnline) { conn.send({ type: 'MANUAL_FEEDBACK', fb: t, val: pendingManualGuess }); document.getElementById('feedback-controls').style.display = 'none'; msgEl.innerHTML = "Feedback sent! Waiting for opponent..."; }
         applyManualFeedback(t, pendingManualGuess);
     } 
     else if (currentMode === 'reverse') {
-        if (t === 'C') { triggerWin(2); return; }
-        p1Hp--; updateUI(); triggerDamage();
+        if (t === 'C') { triggerWin(2); return; } p1Hp--; updateUI(); triggerDamage();
         if (p1Hp <= 0) { triggerDraw(); return; }
         if (t === 'H') { high = robotGuess - 1; appendLog(`Robot: ${robotGuess} (HIGH)`, 'log-p2'); } 
         else if (t === 'L') { low = robotGuess + 1; appendLog(`Robot: ${robotGuess} (LOW)`, 'log-p2'); }
@@ -275,24 +239,14 @@ function manualFeedback(t) {
     }
 }
 
-// Shared logic for applying manual PvP feedback
 function applyManualFeedback(t, guessVal) {
-    if (t === 'C') { triggerWin(2); return; } // P2 guessed correctly!
-    
+    if (t === 'C') { triggerWin(2); return; } 
     p2Hp--; updateUI(); triggerDamage();
-    if (p2Hp <= 0) { triggerWin(1); return; } // If P2 runs out of HP, P1 wins!
-
+    if (p2Hp <= 0) { triggerWin(1); return; } 
     if (t === 'H') { high = guessVal - 1; appendLog(`P2: ${guessVal} (HIGH)`, 'log-p2'); } 
     else if (t === 'L') { low = guessVal + 1; appendLog(`P2: ${guessVal} (LOW)`, 'log-p2'); }
-    
-    activePlayer = 2; // Pass turn back to guesser
-    updateUI();
-
-    if (!isOnline || (isOnline && myPlayerId === 2)) {
-        document.getElementById('input-controls').style.display = 'flex';
-        document.getElementById('feedback-controls').style.display = 'none';
-        msgEl.innerHTML = `<b>Player 2:</b> Enter your next guess!`;
-    }
+    activePlayer = 2; updateUI();
+    if (!isOnline || (isOnline && myPlayerId === 2)) { document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none'; msgEl.innerHTML = `<b>Player 2:</b> Enter your next guess!`; }
 }
 
 // --- ADVANCED AI ENGINE ---
@@ -301,10 +255,8 @@ function getAIGuess() {
     if (aiLevel === 'normal') return Math.floor((low + high) / 2);
     if (aiLevel === 'hard') return Math.floor(low + (high - low) * 0.618);
     if (aiLevel === 'expert') {
-        let dyn = 0.3 + (Math.random() * 0.4); 
-        let g = Math.floor(low + (high - low) * dyn);
-        if (g <= low && low !== high) return low + 1; if (g >= high && low !== high) return high - 1;
-        return g;
+        let dyn = 0.3 + (Math.random() * 0.4); let g = Math.floor(low + (high - low) * dyn);
+        if (g <= low && low !== high) return low + 1; if (g >= high && low !== high) return high - 1; return g;
     }
     return Math.floor((low + high) / 2);
 }
@@ -325,23 +277,18 @@ function robotTurnReverse() {
 
 // --- GAME OVER ---
 function triggerWin(id) { 
-    playSound('win');
-    let w = id === 1 ? "Player 1" : "Player 2";
+    playSound('win'); let w = id === 1 ? "Player 1" : "Player 2";
     if (currentMode === 'reverse' || currentMode === 'pve') w = id === 1 ? "Player 1" : "Robot";
     if (isOnline && id === myPlayerId) w = "YOU";
-    
     msgEl.innerHTML = `<b>${w} WINS!</b>`; document.getElementById('emoji-display').innerText = '🎉';
-    if (id === 1 && currentMode !== 'pvp_manual') userProfile.localWins++; 
-    if (isOnline && id === myPlayerId) userProfile.onlineWins++; 
+    if (id === 1 && currentMode !== 'pvp_manual') userProfile.localWins++; if (isOnline && id === myPlayerId) userProfile.onlineWins++; 
     saveProfile(); startConfetti(); endGame(); 
 }
 function triggerDraw() { playSound('error'); document.getElementById('emoji-display').innerText = '☠️'; msgEl.innerHTML = `Health depleted. Game Over.`; endGame(); }
 function endGame() { document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'none'; document.getElementById('menu-btn').style.display = 'block'; }
 
 // --- CONFETTI ANIMATION ---
-const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d");
-let particles = []; let confettiActive = false;
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-window.addEventListener("resize", resizeCanvas); resizeCanvas();
+const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d"); let particles = []; let confettiActive = false;
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener("resize", resizeCanvas); resizeCanvas();
 function startConfetti() { confettiActive = true; particles = []; for(let i=0; i<100; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, r: Math.random()*6+4, dx: Math.random()*4-2, dy: Math.random()*5+2, color: `hsl(${Math.random()*360}, 100%, 50%)`, tilt: Math.random()*10-10 }); requestAnimationFrame(drawConfetti); setTimeout(() => confettiActive=false, 4000); }
 function drawConfetti() { ctx.clearRect(0,0,canvas.width,canvas.height); let active=0; particles.forEach((p) => { p.y+=p.dy; p.x+=p.dx; p.tilt+=0.1; if(p.y<canvas.height) active++; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r, p.y); ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r); ctx.stroke(); }); if(active>0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0,0,canvas.width,canvas.height); }
