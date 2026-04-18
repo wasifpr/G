@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Number Battle - Master Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <title>Ultimate Number Battle - Mobile Optimized</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         /* --- CSS STYLING --- */
@@ -18,110 +17,106 @@
         @keyframes gradientBG { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
         
         .game-card {
-            background-color: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); text-align: center; max-width: 450px; width: 90%; z-index: 10;
-            position: relative;
+            background-color: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); text-align: center; max-width: 400px; width: 95%; z-index: 10;
+            position: relative; max-height: 95vh; display: flex; flex-direction: column;
         }
         
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
         
-        .emoji-display { font-size: 70px; margin-bottom: 5px; animation: float 3s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .emoji-display { font-size: 50px; margin-bottom: 5px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         
-        .speech-bubble { background: #f0f4f8; border-radius: 15px; padding: 15px; margin-bottom: 20px; position: relative; font-size: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .speech-bubble { background: #f0f4f8; border-radius: 15px; padding: 10px; margin-bottom: 10px; position: relative; font-size: 15px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); flex-shrink: 0;}
         .speech-bubble::after { content: ''; position: absolute; top: -10px; left: 50%; margin-left: -10px; border-width: 0 10px 10px; border-style: solid; border-color: #f0f4f8 transparent; }
         
-        .health-section, .status-board, .controls, .online-lobby { display: none; gap: 15px; }
-        .health-section { justify-content: space-between; margin-bottom: 15px; }
-        .health-box { flex: 1; text-align: left; font-weight: bold; font-size: 14px; padding: 10px; border-radius: 10px; border: 2px solid transparent; }
+        .health-section, .status-board, .controls, .online-lobby { display: none; gap: 10px; flex-shrink: 0;}
+        .health-section { justify-content: space-between; margin-bottom: 10px; }
+        .health-box { flex: 1; text-align: left; font-weight: bold; font-size: 13px; padding: 8px; border-radius: 10px; border: 2px solid transparent; }
         .active-turn { background-color: #ebf8ff; border: 2px solid #4299e1; }
-        .health-bar-bg { background: #e2e8f0; border-radius: 10px; height: 15px; margin-top: 5px; overflow: hidden; }
+        .health-bar-bg { background: #e2e8f0; border-radius: 10px; height: 12px; margin-top: 5px; overflow: hidden; }
         .health-bar-fill { height: 100%; background: #48bb78; width: 100%; transition: width 0.3s, background-color 0.3s; }
         
-        .status-board { justify-content: space-between; background: #edf2f7; padding: 10px 20px; border-radius: 10px; font-weight: bold; border: 2px dashed #cbd5e0; margin-bottom: 15px;}
-        .battle-log { display: none; background: #1a202c; color: #a0aec0; height: 100px; overflow-y: auto; border-radius: 10px; padding: 10px; margin-bottom: 15px; font-family: monospace; font-size: 13px; text-align: left; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .status-board { justify-content: space-between; background: #edf2f7; padding: 8px 15px; border-radius: 10px; font-weight: bold; border: 2px dashed #cbd5e0; margin-bottom: 10px;}
+        .battle-log { display: none; background: #1a202c; color: #a0aec0; height: 70px; overflow-y: auto; border-radius: 10px; padding: 8px; margin-bottom: 10px; font-family: monospace; font-size: 12px; text-align: left; flex-shrink: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
         .log-entry { margin-bottom: 4px; border-bottom: 1px solid #2d3748; padding-bottom: 2px;} .log-p1 { color: #63b3ed; } .log-p2 { color: #fc8181; } .log-sys { color: #f6e05e; } .log-warm { color: #fbd38d; font-style: italic;}
         
-        .setup, .online-lobby, .controls { flex-direction: column; }
-        .input-group { display: flex; gap: 10px; }
-        input[type="number"], input[type="text"], select { flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; text-align: center; font-family: inherit;}
+        .setup, .online-lobby, .controls { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
         
-        button { border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
+        /* The Read-Only Custom Input Box */
+        .fake-input { background: #edf2f7; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid #cbd5e0; text-align: center; color: #2d3748; min-height: 25px; letter-spacing: 2px;}
+        select, input[type="text"] { padding: 10px; font-size: 15px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; font-family: inherit; margin-bottom: 10px; width: 100%; box-sizing: border-box;}
+        
+        button { border: none; border-radius: 10px; padding: 12px 15px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
         button:active { transform: scale(0.95); } button:disabled { background-color: #a0aec0; cursor: not-allowed; }
-        .btn-blue { background-color: #2b6cb0; width: 100%; } .btn-red { background-color: #e53e3e; white-space: nowrap; } .btn-green { background-color: #38a169; width: 100%;}
-        .btn-gold { background-color: #d69e2e; width: 100%;} .btn-gray { background-color: #718096; width: 100%; margin-top: 10px;}
+        .btn-blue { background-color: #2b6cb0; width: 100%; } .btn-red { background-color: #e53e3e; } .btn-green { background-color: #38a169; width: 100%;}
+        .btn-gold { background-color: #d69e2e; width: 100%;} .btn-gray { background-color: #718096;}
         
-        .number-highlight { font-size: 22px; font-weight: bold; color: #d53f8c; }
+        .number-highlight { font-size: 20px; font-weight: bold; color: #d53f8c; }
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
         .room-code { font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #2b6cb0; padding: 10px; background: #ebf8ff; border-radius: 10px; margin: 10px 0;}
 
         /* Profile & Audio UI */
-        .profile-card { background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px; }
-        .profile-card input, .profile-card select { width: calc(100% - 28px); margin-bottom: 10px; font-weight: bold;}
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-weight: bold; color: #4a5568; margin-bottom: 10px;}
-        .mute-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; transition: transform 0.2s; }
-        .mute-btn:hover { transform: scale(1.1); opacity: 1; }
+        .profile-card { background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; font-size: 13px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-weight: bold; color: #4a5568; margin-bottom: 10px;}
+        .mute-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #333; padding: 0;}
+
+        /* VIRTUAL KEYBOARD GRID */
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 5px;}
+        .numpad button { padding: 12px; font-size: 18px; background: #4a5568; }
+        .numpad .btn-red { background: #e53e3e; grid-column: span 2; }
+        .numpad .btn-gray { background: #718096; }
+
+        /* MANUAL FEEDBACK BUTTONS */
+        .feedback-controls { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .feedback-controls .btn-correct { grid-column: span 2; background: #38a169; padding: 15px; font-size: 18px;}
     </style>
 </head>
 <body>
     <canvas id="confetti"></canvas>
     <div class="game-card" id="game-card">
         <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">🔊</button>
-        <div class="emoji-display" id="emoji-display">🏆</div>
-        <div class="speech-bubble" id="message">Welcome back! Check your stats or jump into a game.</div>
+        <div class="emoji-display" id="emoji-display">📱</div>
+        <div class="speech-bubble" id="message">Select a mode!</div>
 
         <div class="setup" id="setup-menu">
             <div class="profile-card">
-                <label>👤 Username & Avatar:</label>
-                <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                <div style="display:flex; gap:10px;">
                     <select id="avatar-input" style="width: 30%;" onchange="saveProfile()">
-                        <option value="🧑">🧑</option><option value="🐱">🐱</option><option value="👽">👽</option><option value="👻">👻</option><option value="🤠">🤠</option><option value="🤖">🤖</option>
+                        <option value="🧑">🧑</option><option value="🐱">🐱</option><option value="👽">👽</option><option value="🤖">🤖</option>
                     </select>
-                    <input type="text" id="username-input" style="width: 70%; margin-bottom:0;" placeholder="Enter name" onchange="saveProfile()">
+                    <input type="text" id="username-input" style="width: 70%;" placeholder="Enter name" onchange="saveProfile()">
                 </div>
-                
                 <div class="stats-grid">
-                    <div>Win (vs AI): <span id="stat-local-win">0</span></div>
-                    <div>Loss (vs AI): <span id="stat-robot-win">0</span></div>
-                    <div>Win (Online): <span id="stat-online-win">0</span></div>
-                    <div>Loss (Online): <span id="stat-online-loss">0</span></div>
+                    <div>Local Wins: <span id="stat-local-win">0</span></div>
+                    <div>Online Wins: <span id="stat-online-win">0</span></div>
                 </div>
-                <button class="btn-gold" style="padding: 5px 10px; font-size: 12px;" onclick="resetStats()">Reset Stats</button>
             </div>
+            
+            <select id="game-mode" style="margin-bottom: 15px;">
+                <option value="pve">Mode 1: You Guess Robot's Number</option>
+                <option value="pvp">Mode 2: Local Pass & Play</option>
+                <option value="reverse">Mode 3: Robot Guesses YOUR Number</option>
+            </select>
 
-            <button class="btn-blue" onclick="startLocalGame()">Play Local (Vs AI)</button>
+            <button class="btn-blue" style="margin-bottom: 10px;" onclick="startGame()">Start Selected Mode</button>
             <button class="btn-green" onclick="showOnlineLobby()">Play Online (Phones/WiFi)</button>
         </div>
 
         <div class="online-lobby" id="online-lobby">
-            <div id="host-section">
-                <button class="btn-blue" onclick="hostOnlineGame()">Create Room (Host)</button>
-                <div id="room-code-display" style="display:none;">
-                    <p>Give this code to Player 2:</p>
-                    <div class="room-code" id="my-code">----</div>
-                    <p>Waiting for connection...</p>
-                </div>
-            </div>
-            <hr style="width: 100%; border: 1px solid #e2e8f0; margin: 15px 0;">
-            <div id="join-section">
-                <div class="input-group">
-                    <input type="text" id="join-code" placeholder="Enter 4-Digit Code" maxlength="4" style="text-transform: uppercase;">
-                    <button class="btn-green" onclick="joinOnlineGame()">Join</button>
-                </div>
-            </div>
-            <button class="btn-red" style="margin-top:10px;" onclick="cancelOnline()">Back</button>
+            <button class="btn-blue" onclick="hostOnlineGame()">Create Room (Host)</button>
+            <div id="room-code-display" style="display:none;"><p>Code for Player 2:</p><div class="room-code" id="my-code">----</div></div>
+            <hr style="width: 100%; border: 1px solid #e2e8f0; margin: 10px 0;">
+            <input type="text" id="join-code" placeholder="Enter 4-Digit Code" maxlength="4" style="text-transform: uppercase;">
+            <button class="btn-green" onclick="joinOnlineGame()">Join Room</button>
+            <button class="btn-gray" style="margin-top:10px;" onclick="cancelOnline()">Back</button>
         </div>
 
         <div class="health-section" id="health-section">
-            <div class="health-box" id="p1-box">
-                <span id="p1-label">🧑 P1</span> (<span id="p1-hp-text"></span>)
-                <div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div>
-            </div>
-            <div class="health-box" id="p2-box">
-                <span id="p2-label">🧑 P2</span> (<span id="p2-hp-text"></span>)
-                <div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div>
-            </div>
+            <div class="health-box" id="p1-box"><span id="p1-label">🧑 P1</span> (<span id="p1-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div></div>
+            <div class="health-box" id="p2-box"><span id="p2-label">🤖 P2</span> (<span id="p2-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div></div>
         </div>
 
         <div class="status-board" id="status-board">
@@ -132,263 +127,195 @@
         <div class="battle-log" id="battle-log"></div>
 
         <div class="controls" id="controls">
-            <div class="input-group" id="input-controls">
-                <input type="number" id="user-input" placeholder="Enter guess...">
-                <button class="btn-red" id="submit-btn" onclick="handleUserGuess()">FIRE!</button>
-            </div>
-            <button class="btn-gray" id="surrender-btn" onclick="surrenderGame()">🏳️ Surrender</button>
             
-            <button class="btn-blue" id="menu-btn" style="display:none;" onclick="location.reload()">Back to Menu</button>
+            <div class="input-group" id="input-controls">
+                <div class="fake-input" id="user-input-display"></div>
+                <div class="numpad" id="numpad-grid">
+                    <button onclick="numPress('1')">1</button><button onclick="numPress('2')">2</button><button onclick="numPress('3')">3</button>
+                    <button onclick="numPress('4')">4</button><button onclick="numPress('5')">5</button><button onclick="numPress('6')">6</button>
+                    <button onclick="numPress('7')">7</button><button onclick="numPress('8')">8</button><button onclick="numPress('9')">9</button>
+                    <button class="btn-gray" onclick="numDel()">⌫</button><button onclick="numPress('0')">0</button><button class="btn-red" id="submit-btn" onclick="handleUserGuess()">FIRE!</button>
+                </div>
+            </div>
+
+            <div class="feedback-controls" id="feedback-controls">
+                <button class="btn-blue" onclick="manualFeedback('H')">Too High ⬇️</button>
+                <button class="btn-blue" onclick="manualFeedback('L')">Too Low ⬆️</button>
+                <button class="btn-correct" onclick="manualFeedback('C')">Correct! ✅</button>
+            </div>
+
+            <button class="btn-gray" id="surrender-btn" style="margin-top:10px;" onclick="surrenderGame()">🏳️ Surrender</button>
+            <button class="btn-blue" id="menu-btn" style="display:none; margin-top:10px;" onclick="location.reload()">Back to Menu</button>
         </div>
     </div>
 
     <script>
-        // --- GAME & TRACKING STATE ---
-        let secretNumber, low, high, p1Hp, p2Hp;
-        let p1GuessCount = 0; let p2GuessCount = 0;
+        // --- GAME STATE ---
+        let secretNumber, low, high, p1Hp, p2Hp, currentMode;
         let maxGuesses = 7; let maxRange = 100; 
-        let activePlayer = 1; 
-        let lastDistance = null; // Used for warm/cold tracking
+        let activePlayer = 1; let lastDistance = null;
+        let currentGuessString = ""; // Stores virtual numpad input
         
         let peer = null; let conn = null; 
         let isOnline = false; let myPlayerId = 1; 
         let isMuted = false;
 
-        // --- LOCAL STORAGE PROFILE ---
-        let userProfile = JSON.parse(localStorage.getItem('numbattle_profile')) || {
-            username: "Player", avatar: "🧑", localWins: 0, robotWins: 0, onlineWins: 0, onlineLosses: 0
-        };
-
-        // Initialize UI with saved data
+        // --- PROFILE ---
+        let userProfile = JSON.parse(localStorage.getItem('numbattle_profile')) || { username: "Player", avatar: "🧑", localWins: 0, onlineWins: 0 };
         document.getElementById('username-input').value = userProfile.username;
         document.getElementById('avatar-input').value = userProfile.avatar || "🧑";
-        updateProfileUI();
-
-        function updateProfileUI() {
-            document.getElementById('stat-local-win').innerText = userProfile.localWins;
-            document.getElementById('stat-robot-win').innerText = userProfile.robotWins;
-            document.getElementById('stat-online-win').innerText = userProfile.onlineWins;
-            document.getElementById('stat-online-loss').innerText = userProfile.onlineLosses;
-        }
+        document.getElementById('stat-local-win').innerText = userProfile.localWins;
+        document.getElementById('stat-online-win').innerText = userProfile.onlineWins;
 
         function saveProfile() {
-            let name = document.getElementById('username-input').value.trim();
-            let avatar = document.getElementById('avatar-input').value;
-            if(name) userProfile.username = name;
-            userProfile.avatar = avatar;
+            userProfile.username = document.getElementById('username-input').value.trim() || "Player";
+            userProfile.avatar = document.getElementById('avatar-input').value;
             localStorage.setItem('numbattle_profile', JSON.stringify(userProfile));
         }
 
-        function resetStats() {
-            if(confirm("Are you sure you want to reset all your wins and losses?")) {
-                userProfile.localWins = 0; userProfile.robotWins = 0; userProfile.onlineWins = 0; userProfile.onlineLosses = 0;
-                saveProfile(); updateProfileUI();
-            }
-        }
-
-        // --- AUDIO ENGINE ---
+        // --- AUDIO ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function toggleMute() {
-            isMuted = !isMuted;
-            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
-        }
+        function toggleMute() { isMuted = !isMuted; document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊'; }
         function playSound(type) {
-            if (isMuted) return;
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (isMuted) return; if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            
-            if (type === 'guess') {
-                osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'win') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-            } else if (type === 'error' || type === 'lose') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
-            }
+            if (type === 'guess') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } 
+            else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
         }
 
         // --- DOM Elements ---
-        const messageEl = document.getElementById('message');
-        const setupMenu = document.getElementById('setup-menu');
-        const onlineLobby = document.getElementById('online-lobby');
-        const controlsEl = document.getElementById('controls');
-        const healthSection = document.getElementById('health-section');
-        const statusBoard = document.getElementById('status-board');
-        const battleLog = document.getElementById('battle-log');
-        const emojiDisplay = document.getElementById('emoji-display');
-        const userInput = document.getElementById('user-input');
-        const submitBtn = document.getElementById('submit-btn');
-        const gameCard = document.getElementById('game-card');
+        const messageEl = document.getElementById('message'); const setupMenu = document.getElementById('setup-menu');
+        const onlineLobby = document.getElementById('online-lobby'); const controlsEl = document.getElementById('controls');
+        const healthSection = document.getElementById('health-section'); const statusBoard = document.getElementById('status-board');
+        const battleLog = document.getElementById('battle-log'); const emojiDisplay = document.getElementById('emoji-display');
+        const inputDisplay = document.getElementById('user-input-display'); const gameCard = document.getElementById('game-card');
 
-        // --- JUICE & LOGGING ---
-        function triggerDamageJuice() {
-            playSound('error');
-            gameCard.classList.remove('shake'); void gameCard.offsetWidth; gameCard.classList.add('shake');
-            document.body.classList.add('damage-flash'); setTimeout(() => document.body.classList.remove('damage-flash'), 150);
+        // --- VIRTUAL NUMPAD LOGIC ---
+        function numPress(val) {
+            if(currentGuessString.length < 3) { // Max 3 digits (up to 999)
+                currentGuessString += val;
+                inputDisplay.innerText = currentGuessString;
+                playSound('guess');
+            }
         }
-        function appendLog(text, typeClass) {
-            const entry = document.createElement('div'); entry.className = `log-entry ${typeClass}`;
-            entry.innerHTML = `> ${text}`; battleLog.appendChild(entry); battleLog.scrollTop = battleLog.scrollHeight;
+        function numDel() {
+            currentGuessString = currentGuessString.slice(0, -1);
+            inputDisplay.innerText = currentGuessString;
+        }
+        function clearNumpad() {
+            currentGuessString = ""; inputDisplay.innerText = "";
         }
 
-        // --- UI TRANSITIONS ---
+        // --- UI ---
+        function triggerDamageJuice() { playSound('error'); gameCard.classList.remove('shake'); void gameCard.offsetWidth; gameCard.classList.add('shake'); document.body.classList.add('damage-flash'); setTimeout(() => document.body.classList.remove('damage-flash'), 150); }
+        function appendLog(text, typeClass) { const entry = document.createElement('div'); entry.className = `log-entry ${typeClass}`; entry.innerHTML = `> ${text}`; battleLog.appendChild(entry); battleLog.scrollTop = battleLog.scrollHeight; }
         function showOnlineLobby() { setupMenu.style.display = 'none'; onlineLobby.style.display = 'flex'; messageEl.innerHTML = "Host a room or join a friend!"; }
         function cancelOnline() { if(peer) peer.destroy(); onlineLobby.style.display = 'none'; setupMenu.style.display = 'flex'; document.getElementById('room-code-display').style.display = 'none'; }
 
-        // --- NETWORKING (STUN ENABLED) ---
+        // --- NETWORKING (STUN) ---
         function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
         const peerConfig = { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
         function hostOnlineGame() {
-            saveProfile();
-            const roomCode = generateRoomCode();
-            document.getElementById('my-code').innerText = roomCode;
-            document.getElementById('room-code-display').style.display = 'block';
-            
+            saveProfile(); const roomCode = generateRoomCode(); document.getElementById('my-code').innerText = roomCode; document.getElementById('room-code-display').style.display = 'block';
             peer = new Peer('numbattle-' + roomCode, peerConfig);
-            peer.on('open', () => appendLog(`Room ${roomCode} opened...`, 'log-sys'));
-
             peer.on('connection', (connection) => {
-                conn = connection; setupNetworkListeners();
-                isOnline = true; myPlayerId = 1; 
+                conn = connection; setupNetworkListeners(); isOnline = true; currentMode = 'online'; myPlayerId = 1; 
                 secretNumber = Math.floor(Math.random() * maxRange) + 1;
-                
-                conn.on('open', () => {
-                    conn.send({ type: 'START_GAME', maxRange: maxRange, secret: secretNumber, opponentName: userProfile.username, opponentAvatar: userProfile.avatar });
-                    initGameUI(`Connected! Your opponent joined.`);
-                });
+                conn.on('open', () => { conn.send({ type: 'START_GAME', secret: secretNumber, oppName: userProfile.username, oppAvatar: userProfile.avatar }); initGameUI(`Connected! Opponent joined.`); });
             });
         }
 
         function joinOnlineGame() {
-            saveProfile();
-            let code = document.getElementById('join-code').value.toUpperCase();
-            if(code.length !== 4) return alert("Code must be 4 characters!");
-            
-            messageEl.innerHTML = "Connecting...";
-            peer = new Peer(null, peerConfig); 
-            peer.on('open', () => {
-                conn = peer.connect('numbattle-' + code);
-                setupNetworkListeners();
-            });
+            saveProfile(); let code = document.getElementById('join-code').value.toUpperCase(); if(code.length !== 4) return alert("Invalid Code");
+            messageEl.innerHTML = "Connecting..."; peer = new Peer(null, peerConfig); 
+            peer.on('open', () => { conn = peer.connect('numbattle-' + code); setupNetworkListeners(); });
         }
 
         function setupNetworkListeners() {
             conn.on('data', (data) => {
                 if (data.type === 'START_GAME') {
-                    isOnline = true; myPlayerId = 2; maxRange = data.maxRange; secretNumber = data.secret;
-                    initGameUI(`Connected to Host!`);
-                    document.getElementById('p1-label').innerText = `${data.opponentAvatar} ${data.opponentName}`; // Sync host name
-                    conn.send({ type: 'SYNC_NAME', opponentName: userProfile.username, opponentAvatar: userProfile.avatar });
+                    isOnline = true; currentMode = 'online'; myPlayerId = 2; secretNumber = data.secret;
+                    initGameUI(`Connected to Host!`); document.getElementById('p1-label').innerText = `${data.oppAvatar} ${data.oppName}`;
+                    conn.send({ type: 'SYNC_NAME', oppName: userProfile.username, oppAvatar: userProfile.avatar });
                 } 
                 else if (data.type === 'GUESS') processGuess(data.player, data.value);
-                else if (data.type === 'SYNC_NAME') {
-                     document.getElementById('p2-label').innerText = `${data.opponentAvatar} ${data.opponentName}`; // Sync guest name
-                     appendLog(`Opponent is: ${data.opponentName}`, 'log-sys');
-                }
-                else if (data.type === 'SURRENDER') {
-                     processSurrender(data.player);
-                }
+                else if (data.type === 'SYNC_NAME') { document.getElementById('p2-label').innerText = `${data.oppAvatar} ${data.oppName}`; }
+                else if (data.type === 'SURRENDER') processSurrender(data.player);
             });
             conn.on('close', () => { alert("Opponent disconnected!"); location.reload(); });
         }
 
         // --- GAME ENGINE ---
-        function startLocalGame() {
-            saveProfile(); isOnline = false; myPlayerId = 1;
+        function startGame() {
+            saveProfile(); currentMode = document.getElementById('game-mode').value; isOnline = false; myPlayerId = 1;
             secretNumber = Math.floor(Math.random() * maxRange) + 1;
-            document.getElementById('p2-label').innerText = "🤖 Robot";
-            initGameUI("Local game started! Defeat the AI.");
+            initGameUI(currentMode === 'reverse' ? "Think of a number between 1 and 100. I will try to guess it!" : "Game Started!");
         }
 
         function initGameUI(msg) {
-            setupMenu.style.display = 'none'; onlineLobby.style.display = 'none';
-            controlsEl.style.display = 'flex'; statusBoard.style.display = 'flex';
-            healthSection.style.display = 'flex'; battleLog.style.display = 'block';
+            setupMenu.style.display = 'none'; onlineLobby.style.display = 'none'; controlsEl.style.display = 'flex'; statusBoard.style.display = 'flex'; healthSection.style.display = 'flex'; battleLog.style.display = 'block';
+            low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; activePlayer = 1; clearNumpad();
             
-            low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; 
-            p1GuessCount = 0; p2GuessCount = 0; activePlayer = 1; lastDistance = null;
+            document.getElementById('p1-label').innerText = `${userProfile.avatar} ` + (isOnline && myPlayerId !== 1 ? "Opponent" : userProfile.username);
+            document.getElementById('p2-label').innerText = currentMode === 'pvp' ? "🧑 P2" : (isOnline && myPlayerId === 2 ? `${userProfile.avatar} YOU` : "🤖 Robot");
             
-            if(isOnline) {
-                if(myPlayerId === 1) document.getElementById('p1-label').innerText = `${userProfile.avatar} YOU`;
-                if(myPlayerId === 2) document.getElementById('p2-label').innerText = `${userProfile.avatar} YOU`;
-            } else {
-                document.getElementById('p1-label').innerText = `${userProfile.avatar} ${userProfile.username}`;
-            }
-            
-            userInput.setAttribute('max', maxRange); 
             updateBoard(); updateHealth(); checkTurnLock();
-            
-            emojiDisplay.innerText = '⚔️'; 
-            messageEl.innerHTML = msg + `<br><b>Player 1</b> goes first!`; 
+            messageEl.innerHTML = msg;
+
+            // UI Mode Switching
+            if (currentMode === 'reverse') {
+                document.getElementById('input-controls').style.display = 'none';
+                document.getElementById('feedback-controls').style.display = 'grid';
+                activePlayer = 2; // Robot goes first
+                checkTurnLock();
+                setTimeout(robotTurnReverse, 1500);
+            } else {
+                document.getElementById('input-controls').style.display = 'flex';
+                document.getElementById('feedback-controls').style.display = 'none';
+            }
         }
 
         function updateBoard() { document.getElementById('min-display').innerText = low; document.getElementById('max-display').innerText = high; }
-        function updateHealth() {
-            const p1Pct = (p1Hp / maxGuesses) * 100; const p2Pct = (p2Hp / maxGuesses) * 100;
-            document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp;
-            document.getElementById('p1-hp-bar').style.width = `${p1Pct}%`; document.getElementById('p2-hp-bar').style.width = `${p2Pct}%`;
-        }
+        function updateHealth() { document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp; document.getElementById('p1-hp-bar').style.width = `${(p1Hp/maxGuesses)*100}%`; document.getElementById('p2-hp-bar').style.width = `${(p2Hp/maxGuesses)*100}%`; }
 
         function checkTurnLock() {
             document.getElementById('p1-box').classList.remove('active-turn'); document.getElementById('p2-box').classList.remove('active-turn');
-            if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn');
-            else document.getElementById('p2-box').classList.add('active-turn');
-
-            let isMyTurn = isOnline ? (activePlayer === myPlayerId) : (activePlayer === 1);
-            userInput.disabled = !isMyTurn; submitBtn.disabled = !isMyTurn;
-            document.getElementById('surrender-btn').disabled = !isMyTurn;
-            if(isMyTurn) userInput.focus();
+            if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn'); else document.getElementById('p2-box').classList.add('active-turn');
+            
+            // Lock Numpad if not your turn
+            let isMyTurn = isOnline ? (activePlayer === myPlayerId) : (activePlayer === 1 || currentMode === 'pvp');
+            let buttons = document.querySelectorAll('.numpad button');
+            buttons.forEach(b => b.disabled = !isMyTurn);
+            document.getElementById('surrender-btn').disabled = !isMyTurn && currentMode !== 'reverse';
         }
 
-        // --- ACTIONS ---
         function surrenderGame() {
-            if(!confirm("Are you sure you want to surrender? You will lose this match.")) return;
+            if(!confirm("Surrender?")) return;
             if(isOnline) conn.send({ type: 'SURRENDER', player: myPlayerId });
             processSurrender(myPlayerId);
         }
 
         function processSurrender(surrenderingPlayer) {
-            let loserName = surrenderingPlayer === 1 ? "Player 1" : "Player 2";
-            let winnerId = surrenderingPlayer === 1 ? 2 : 1;
-            
-            appendLog(`${loserName} waves the white flag! 🏳️`, 'log-sys');
+            let loser = surrenderingPlayer === 1 ? "P1" : "P2"; let winnerId = surrenderingPlayer === 1 ? 2 : 1;
             if (surrenderingPlayer === 1) p1Hp = 0; else p2Hp = 0;
-            
-            updateHealth(); triggerDamageJuice();
-            messageEl.innerHTML = `<b>${loserName} SURRENDERED!</b><br>The secret number was ${secretNumber}.`;
-            triggerWin(winnerId); // Give win to the other player
+            updateHealth(); triggerDamageJuice(); triggerWin(winnerId);
         }
 
         function handleUserGuess() {
-            let guess = parseInt(userInput.value);
+            let guess = parseInt(currentGuessString);
             if (isNaN(guess) || guess < low || guess > high) return alert(`Guess between ${low} and ${high}!`);
-            playSound('guess');
+            playSound('guess'); clearNumpad();
             if (isOnline) conn.send({ type: 'GUESS', player: myPlayerId, value: guess });
-            processGuess(myPlayerId, guess);
-            userInput.value = '';
+            processGuess(activePlayer, guess);
         }
 
         function processGuess(playerWhoGuessed, guess) {
             let pName = playerWhoGuessed === 1 ? "P1" : "P2";
-            let logClass = playerWhoGuessed === 1 ? "log-p1" : "log-p2";
             
-            if (playerWhoGuessed === 1) p1GuessCount++; else p2GuessCount++;
-
-            // WARM/COLD LOGIC
-            let currentDistance = Math.abs(secretNumber - guess);
-            if (lastDistance !== null && currentDistance !== 0) {
-                if (currentDistance < lastDistance) appendLog(`*Getting warmer!*`, 'log-warm');
-                else if (currentDistance > lastDistance) appendLog(`*Getting colder...*`, 'log-warm');
-            }
-            lastDistance = currentDistance;
-
             if (guess === secretNumber) {
-                emojiDisplay.innerText = '🎉'; 
-                appendLog(`${pName} guessed ${guess}. TARGET ACQUIRED!`, logClass);
+                emojiDisplay.innerText = '🎉'; appendLog(`${pName} guessed ${guess}. ACQUIRED!`, 'log-sys');
                 triggerWin(playerWhoGuessed); return;
             }
 
@@ -399,91 +326,76 @@
 
             if (guess > secretNumber) {
                 if (guess <= high) high = guess - 1; 
-                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO HIGH!</b>`;
-                appendLog(`${pName} guessed ${guess}. TOO HIGH.`, logClass);
+                messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO HIGH!</b>`; appendLog(`${pName} guessed ${guess} (HIGH)`, 'log-p1');
             } else {
                 if (guess >= low) low = guess + 1; 
-                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO LOW!</b>`;
-                appendLog(`${pName} guessed ${guess}. TOO LOW.`, logClass);
+                messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO LOW!</b>`; appendLog(`${pName} guessed ${guess} (LOW)`, 'log-p1');
             }
-
             updateBoard();
             
             activePlayer = activePlayer === 1 ? 2 : 1;
-            if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2; 
-            if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
-
-            let nextPName = activePlayer === 1 ? "P1" : "P2";
-            messageEl.innerHTML += `<br><br><b>${nextPName}'s</b> Turn!`; 
-            
+            if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2; if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
             checkTurnLock();
-            if (!isOnline && activePlayer === 2) setTimeout(robotTurn, 1500); 
+            
+            if (currentMode === 'pve' && activePlayer === 2) setTimeout(robotTurn, 1000); 
         }
 
+        // --- PVE ROBOT AI ---
         function robotTurn() {
             if (p2Hp <= 0) { activePlayer = 1; checkTurnLock(); return; }
             emojiDisplay.innerText = '🧠'; 
             setTimeout(() => {
-                let robotGuess = Math.floor((low + high) / 2); 
-                if (robotGuess < low) robotGuess = low; if (robotGuess > high) robotGuess = high;
+                let robotGuess = Math.floor((low + high) / 2); if (robotGuess < low) robotGuess = low; if (robotGuess > high) robotGuess = high;
                 processGuess(2, robotGuess);
             }, 1000); 
         }
 
-        // --- GAME OVER & PROGRESSION SAVING ---
-        function triggerWin(winningPlayerId) { 
-            startConfetti(); playSound('win');
+        // --- REVERSE MODE LOGIC (YOU JUDGE) ---
+        let robotCurrentGuess = 0;
+        function robotTurnReverse() {
+            if(low > high) { messageEl.innerHTML = "Error! Your hints crossed. You broke my circuits!"; triggerDamageJuice(); return; }
+            robotCurrentGuess = Math.floor((low + high) / 2);
+            emojiDisplay.innerText = '🤔';
+            messageEl.innerHTML = `Is your number... <b><span class="number-highlight">${robotCurrentGuess}</span></b>?<br>Use the buttons below to tell me!`;
             
-            let winnerName = winningPlayerId === 1 ? "Player 1" : "Player 2";
-            if (!isOnline && winningPlayerId === 2) winnerName = "Robot";
-            if (isOnline && winningPlayerId === myPlayerId) winnerName = "YOU";
+            // Enable manual feedback buttons
+            let btns = document.querySelectorAll('.feedback-controls button');
+            btns.forEach(b => b.disabled = false);
+        }
+
+        function manualFeedback(type) {
+            let btns = document.querySelectorAll('.feedback-controls button');
+            btns.forEach(b => b.disabled = true); // lock buttons to prevent double click
             
-            let statMsg = `<br><br>📊 <b>Match Stats:</b><br>Player 1 used ${p1GuessCount} guesses.<br>`;
-            if(isOnline) statMsg += `Player 2 used ${p2GuessCount} guesses.`;
-            else statMsg += `Robot used ${p2GuessCount} guesses.`;
-
-            messageEl.innerHTML = `<b>${winnerName} WINS!</b> The number was ${secretNumber}.${statMsg}`;
-
-            // Save to Profile Database
-            if (!isOnline) {
-                if (winningPlayerId === 1) userProfile.localWins++;
-                else userProfile.robotWins++;
-            } else {
-                if (winningPlayerId === myPlayerId) userProfile.onlineWins++;
-                else userProfile.onlineLosses++;
+            if (type === 'C') {
+                emojiDisplay.innerText = '🎉'; messageEl.innerHTML = "I knew it! I win!";
+                triggerWin(2); return;
             }
+            
+            p1Hp--; // You lose HP for every hint you have to give!
+            updateHealth(); triggerDamageJuice();
+
+            if (p1Hp <= 0) { triggerDraw(); return; } // You ran out of HP giving hints
+
+            if (type === 'H') {
+                high = robotCurrentGuess - 1; appendLog(`Robot guessed ${robotCurrentGuess} (HIGH)`, 'log-p2');
+            } else if (type === 'L') {
+                low = robotCurrentGuess + 1; appendLog(`Robot guessed ${robotCurrentGuess} (LOW)`, 'log-p2');
+            }
+            updateBoard();
+            setTimeout(robotTurnReverse, 1000);
+        }
+
+        // --- GAME OVER ---
+        function triggerWin(winningId) { 
+            let winner = winningId === 1 ? "Player 1" : (currentMode === 'reverse' || currentMode === 'pve' ? "Robot" : "Player 2");
+            if (isOnline && winningId === myPlayerId) winner = "YOU";
+            messageEl.innerHTML = `<b>${winner} WINS!</b>`;
+            if (winningId === 1) userProfile.localWins++; if (isOnline && winningId === myPlayerId) userProfile.onlineWins++;
             saveProfile(); endGame(); 
         }
-        
-        function triggerDraw() { 
-            playSound('lose'); emojiDisplay.innerText = '☠️'; 
-            messageEl.innerHTML = `Draw! Secret was <b>${secretNumber}</b>.<br><br>You both ran out of health.<br>P1 used ${p1GuessCount} guesses. P2 used ${p2GuessCount} guesses.`; 
-            endGame(); 
-        }
-
-        function endGame() {
-            document.getElementById('input-controls').style.display = 'none'; 
-            document.getElementById('surrender-btn').style.display = 'none'; 
-            document.getElementById('menu-btn').style.display = 'block'; 
-        }
-
-        // --- CONFETTI ---
-        const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d");
-        let particles = []; let confettiActive = false;
-        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener("resize", resizeCanvas); resizeCanvas();
-        function startConfetti() {
-            confettiActive = true; particles = [];
-            for(let i=0; i<100; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, r: Math.random()*6+4, dx: Math.random()*4-2, dy: Math.random()*5+2, color: `hsl(${Math.random()*360}, 100%, 50%)`, tilt: Math.random()*10-10 });
-            requestAnimationFrame(drawConfetti); setTimeout(() => confettiActive=false, 4000);
-        }
-        function drawConfetti() {
-            ctx.clearRect(0,0,canvas.width,canvas.height); let active=0;
-            particles.forEach((p) => { p.y+=p.dy; p.x+=p.dx; p.tilt+=0.1; if(p.y<canvas.height) active++; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r, p.y); ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r); ctx.stroke(); });
-            if(active>0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0,0,canvas.width,canvas.height);
-        }
-        
-        userInput.addEventListener("keypress", (e) => { if (e.key === "Enter" && !submitBtn.disabled) { e.preventDefault(); submitBtn.click(); } });
+        function triggerDraw() { emojiDisplay.innerText = '☠️'; messageEl.innerHTML = `Game Over. Health depleted.`; endGame(); }
+        function endGame() { document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'none'; document.getElementById('surrender-btn').style.display = 'none'; document.getElementById('menu-btn').style.display = 'block'; }
     </script>
 </body>
 </html>
