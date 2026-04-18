@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Number Battle - Profile Edition</title>
+    <title>Ultimate Number Battle - Master Edition</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         /* --- CSS STYLING --- */
@@ -20,7 +20,9 @@
         .game-card {
             background-color: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); text-align: center; max-width: 450px; width: 90%; z-index: 10;
+            position: relative;
         }
+        
         .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
         
@@ -39,49 +41,57 @@
         
         .status-board { justify-content: space-between; background: #edf2f7; padding: 10px 20px; border-radius: 10px; font-weight: bold; border: 2px dashed #cbd5e0; margin-bottom: 15px;}
         .battle-log { display: none; background: #1a202c; color: #a0aec0; height: 100px; overflow-y: auto; border-radius: 10px; padding: 10px; margin-bottom: 15px; font-family: monospace; font-size: 13px; text-align: left; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
-        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #2d3748; padding-bottom: 2px;} .log-p1 { color: #63b3ed; } .log-p2 { color: #fc8181; } .log-sys { color: #f6e05e; }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #2d3748; padding-bottom: 2px;} .log-p1 { color: #63b3ed; } .log-p2 { color: #fc8181; } .log-sys { color: #f6e05e; } .log-warm { color: #fbd38d; font-style: italic;}
         
         .setup, .online-lobby, .controls { flex-direction: column; }
         .input-group { display: flex; gap: 10px; }
-        input[type="number"], input[type="text"] { flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; text-align: center; }
+        input[type="number"], input[type="text"], select { flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; text-align: center; font-family: inherit;}
+        
         button { border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
         button:active { transform: scale(0.95); } button:disabled { background-color: #a0aec0; cursor: not-allowed; }
         .btn-blue { background-color: #2b6cb0; width: 100%; } .btn-red { background-color: #e53e3e; white-space: nowrap; } .btn-green { background-color: #38a169; width: 100%;}
-        .btn-gold { background-color: #d69e2e; width: 100%;}
+        .btn-gold { background-color: #d69e2e; width: 100%;} .btn-gray { background-color: #718096; width: 100%; margin-top: 10px;}
         
         .number-highlight { font-size: 22px; font-weight: bold; color: #d53f8c; }
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
         .room-code { font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #2b6cb0; padding: 10px; background: #ebf8ff; border-radius: 10px; margin: 10px 0;}
 
-        /* Player Profile Stats Box */
-        .profile-card {
-            background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;
-        }
-        .profile-card input { width: calc(100% - 28px); margin-bottom: 10px; font-weight: bold;}
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-weight: bold; color: #4a5568;}
+        /* Profile & Audio UI */
+        .profile-card { background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px; }
+        .profile-card input, .profile-card select { width: calc(100% - 28px); margin-bottom: 10px; font-weight: bold;}
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-weight: bold; color: #4a5568; margin-bottom: 10px;}
+        .mute-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 24px; cursor: pointer; color: #333; padding: 0; transition: transform 0.2s; }
+        .mute-btn:hover { transform: scale(1.1); opacity: 1; }
     </style>
 </head>
 <body>
     <canvas id="confetti"></canvas>
     <div class="game-card" id="game-card">
+        <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">🔊</button>
         <div class="emoji-display" id="emoji-display">🏆</div>
         <div class="speech-bubble" id="message">Welcome back! Check your stats or jump into a game.</div>
 
         <div class="setup" id="setup-menu">
             <div class="profile-card">
-                <label>👤 Username:</label>
-                <input type="text" id="username-input" placeholder="Enter name" onchange="saveProfile()">
+                <label>👤 Username & Avatar:</label>
+                <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                    <select id="avatar-input" style="width: 30%;" onchange="saveProfile()">
+                        <option value="🧑">🧑</option><option value="🐱">🐱</option><option value="👽">👽</option><option value="👻">👻</option><option value="🤠">🤠</option><option value="🤖">🤖</option>
+                    </select>
+                    <input type="text" id="username-input" style="width: 70%; margin-bottom:0;" placeholder="Enter name" onchange="saveProfile()">
+                </div>
+                
                 <div class="stats-grid">
                     <div>Win (vs AI): <span id="stat-local-win">0</span></div>
                     <div>Loss (vs AI): <span id="stat-robot-win">0</span></div>
                     <div>Win (Online): <span id="stat-online-win">0</span></div>
                     <div>Loss (Online): <span id="stat-online-loss">0</span></div>
                 </div>
+                <button class="btn-gold" style="padding: 5px 10px; font-size: 12px;" onclick="resetStats()">Reset Stats</button>
             </div>
 
             <button class="btn-blue" onclick="startLocalGame()">Play Local (Vs AI)</button>
             <button class="btn-green" onclick="showOnlineLobby()">Play Online (Phones/WiFi)</button>
-            <button class="btn-gold" onclick="resetStats()">Reset Stats</button>
         </div>
 
         <div class="online-lobby" id="online-lobby">
@@ -122,10 +132,12 @@
         <div class="battle-log" id="battle-log"></div>
 
         <div class="controls" id="controls">
-            <div class="input-group">
+            <div class="input-group" id="input-controls">
                 <input type="number" id="user-input" placeholder="Enter guess...">
                 <button class="btn-red" id="submit-btn" onclick="handleUserGuess()">FIRE!</button>
             </div>
+            <button class="btn-gray" id="surrender-btn" onclick="surrenderGame()">🏳️ Surrender</button>
+            
             <button class="btn-blue" id="menu-btn" style="display:none;" onclick="location.reload()">Back to Menu</button>
         </div>
     </div>
@@ -136,21 +148,20 @@
         let p1GuessCount = 0; let p2GuessCount = 0;
         let maxGuesses = 7; let maxRange = 100; 
         let activePlayer = 1; 
+        let lastDistance = null; // Used for warm/cold tracking
         
         let peer = null; let conn = null; 
         let isOnline = false; let myPlayerId = 1; 
+        let isMuted = false;
 
         // --- LOCAL STORAGE PROFILE ---
         let userProfile = JSON.parse(localStorage.getItem('numbattle_profile')) || {
-            username: "Player",
-            localWins: 0,
-            robotWins: 0,
-            onlineWins: 0,
-            onlineLosses: 0
+            username: "Player", avatar: "🧑", localWins: 0, robotWins: 0, onlineWins: 0, onlineLosses: 0
         };
 
-        // Initialize Menu UI with saved data
+        // Initialize UI with saved data
         document.getElementById('username-input').value = userProfile.username;
+        document.getElementById('avatar-input').value = userProfile.avatar || "🧑";
         updateProfileUI();
 
         function updateProfileUI() {
@@ -162,14 +173,40 @@
 
         function saveProfile() {
             let name = document.getElementById('username-input').value.trim();
+            let avatar = document.getElementById('avatar-input').value;
             if(name) userProfile.username = name;
+            userProfile.avatar = avatar;
             localStorage.setItem('numbattle_profile', JSON.stringify(userProfile));
         }
 
         function resetStats() {
             if(confirm("Are you sure you want to reset all your wins and losses?")) {
-                userProfile = { username: userProfile.username, localWins: 0, robotWins: 0, onlineWins: 0, onlineLosses: 0 };
+                userProfile.localWins = 0; userProfile.robotWins = 0; userProfile.onlineWins = 0; userProfile.onlineLosses = 0;
                 saveProfile(); updateProfileUI();
+            }
+        }
+
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+        }
+        function playSound(type) {
+            if (isMuted) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'guess') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'win') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'error' || type === 'lose') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.5);
             }
         }
 
@@ -188,6 +225,7 @@
 
         // --- JUICE & LOGGING ---
         function triggerDamageJuice() {
+            playSound('error');
             gameCard.classList.remove('shake'); void gameCard.offsetWidth; gameCard.classList.add('shake');
             document.body.classList.add('damage-flash'); setTimeout(() => document.body.classList.remove('damage-flash'), 150);
         }
@@ -200,16 +238,17 @@
         function showOnlineLobby() { setupMenu.style.display = 'none'; onlineLobby.style.display = 'flex'; messageEl.innerHTML = "Host a room or join a friend!"; }
         function cancelOnline() { if(peer) peer.destroy(); onlineLobby.style.display = 'none'; setupMenu.style.display = 'flex'; document.getElementById('room-code-display').style.display = 'none'; }
 
-        // --- NETWORKING ---
+        // --- NETWORKING (STUN ENABLED) ---
         function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+        const peerConfig = { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
         function hostOnlineGame() {
-            saveProfile(); // Save name before starting
+            saveProfile();
             const roomCode = generateRoomCode();
             document.getElementById('my-code').innerText = roomCode;
             document.getElementById('room-code-display').style.display = 'block';
             
-            peer = new Peer('numbattle-' + roomCode);
+            peer = new Peer('numbattle-' + roomCode, peerConfig);
             peer.on('open', () => appendLog(`Room ${roomCode} opened...`, 'log-sys'));
 
             peer.on('connection', (connection) => {
@@ -218,7 +257,7 @@
                 secretNumber = Math.floor(Math.random() * maxRange) + 1;
                 
                 conn.on('open', () => {
-                    conn.send({ type: 'START_GAME', maxRange: maxRange, secret: secretNumber, opponentName: userProfile.username });
+                    conn.send({ type: 'START_GAME', maxRange: maxRange, secret: secretNumber, opponentName: userProfile.username, opponentAvatar: userProfile.avatar });
                     initGameUI(`Connected! Your opponent joined.`);
                 });
             });
@@ -230,7 +269,7 @@
             if(code.length !== 4) return alert("Code must be 4 characters!");
             
             messageEl.innerHTML = "Connecting...";
-            peer = new Peer(); 
+            peer = new Peer(null, peerConfig); 
             peer.on('open', () => {
                 conn = peer.connect('numbattle-' + code);
                 setupNetworkListeners();
@@ -242,14 +281,16 @@
                 if (data.type === 'START_GAME') {
                     isOnline = true; myPlayerId = 2; maxRange = data.maxRange; secretNumber = data.secret;
                     initGameUI(`Connected to Host!`);
-                    
-                    // Send my name back to host
-                    conn.send({ type: 'SYNC_NAME', opponentName: userProfile.username });
+                    document.getElementById('p1-label').innerText = `${data.opponentAvatar} ${data.opponentName}`; // Sync host name
+                    conn.send({ type: 'SYNC_NAME', opponentName: userProfile.username, opponentAvatar: userProfile.avatar });
                 } 
                 else if (data.type === 'GUESS') processGuess(data.player, data.value);
                 else if (data.type === 'SYNC_NAME') {
-                     // Minor UI polish to show opponent name in log
+                     document.getElementById('p2-label').innerText = `${data.opponentAvatar} ${data.opponentName}`; // Sync guest name
                      appendLog(`Opponent is: ${data.opponentName}`, 'log-sys');
+                }
+                else if (data.type === 'SURRENDER') {
+                     processSurrender(data.player);
                 }
             });
             conn.on('close', () => { alert("Opponent disconnected!"); location.reload(); });
@@ -257,8 +298,7 @@
 
         // --- GAME ENGINE ---
         function startLocalGame() {
-            saveProfile();
-            isOnline = false; myPlayerId = 1;
+            saveProfile(); isOnline = false; myPlayerId = 1;
             secretNumber = Math.floor(Math.random() * maxRange) + 1;
             document.getElementById('p2-label').innerText = "🤖 Robot";
             initGameUI("Local game started! Defeat the AI.");
@@ -270,13 +310,13 @@
             healthSection.style.display = 'flex'; battleLog.style.display = 'block';
             
             low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; 
-            p1GuessCount = 0; p2GuessCount = 0; activePlayer = 1; 
+            p1GuessCount = 0; p2GuessCount = 0; activePlayer = 1; lastDistance = null;
             
             if(isOnline) {
-                document.getElementById('p1-label').innerText = myPlayerId === 1 ? `🧑 YOU` : `🧑 Opponent`;
-                document.getElementById('p2-label').innerText = myPlayerId === 2 ? `🧑 YOU` : `🧑 Opponent`;
+                if(myPlayerId === 1) document.getElementById('p1-label').innerText = `${userProfile.avatar} YOU`;
+                if(myPlayerId === 2) document.getElementById('p2-label').innerText = `${userProfile.avatar} YOU`;
             } else {
-                document.getElementById('p1-label').innerText = `🧑 ${userProfile.username}`;
+                document.getElementById('p1-label').innerText = `${userProfile.avatar} ${userProfile.username}`;
             }
             
             userInput.setAttribute('max', maxRange); 
@@ -287,7 +327,6 @@
         }
 
         function updateBoard() { document.getElementById('min-display').innerText = low; document.getElementById('max-display').innerText = high; }
-
         function updateHealth() {
             const p1Pct = (p1Hp / maxGuesses) * 100; const p2Pct = (p2Hp / maxGuesses) * 100;
             document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp;
@@ -301,12 +340,33 @@
 
             let isMyTurn = isOnline ? (activePlayer === myPlayerId) : (activePlayer === 1);
             userInput.disabled = !isMyTurn; submitBtn.disabled = !isMyTurn;
+            document.getElementById('surrender-btn').disabled = !isMyTurn;
             if(isMyTurn) userInput.focus();
+        }
+
+        // --- ACTIONS ---
+        function surrenderGame() {
+            if(!confirm("Are you sure you want to surrender? You will lose this match.")) return;
+            if(isOnline) conn.send({ type: 'SURRENDER', player: myPlayerId });
+            processSurrender(myPlayerId);
+        }
+
+        function processSurrender(surrenderingPlayer) {
+            let loserName = surrenderingPlayer === 1 ? "Player 1" : "Player 2";
+            let winnerId = surrenderingPlayer === 1 ? 2 : 1;
+            
+            appendLog(`${loserName} waves the white flag! 🏳️`, 'log-sys');
+            if (surrenderingPlayer === 1) p1Hp = 0; else p2Hp = 0;
+            
+            updateHealth(); triggerDamageJuice();
+            messageEl.innerHTML = `<b>${loserName} SURRENDERED!</b><br>The secret number was ${secretNumber}.`;
+            triggerWin(winnerId); // Give win to the other player
         }
 
         function handleUserGuess() {
             let guess = parseInt(userInput.value);
             if (isNaN(guess) || guess < low || guess > high) return alert(`Guess between ${low} and ${high}!`);
+            playSound('guess');
             if (isOnline) conn.send({ type: 'GUESS', player: myPlayerId, value: guess });
             processGuess(myPlayerId, guess);
             userInput.value = '';
@@ -316,8 +376,15 @@
             let pName = playerWhoGuessed === 1 ? "P1" : "P2";
             let logClass = playerWhoGuessed === 1 ? "log-p1" : "log-p2";
             
-            // TRACK GUESSES
             if (playerWhoGuessed === 1) p1GuessCount++; else p2GuessCount++;
+
+            // WARM/COLD LOGIC
+            let currentDistance = Math.abs(secretNumber - guess);
+            if (lastDistance !== null && currentDistance !== 0) {
+                if (currentDistance < lastDistance) appendLog(`*Getting warmer!*`, 'log-warm');
+                else if (currentDistance > lastDistance) appendLog(`*Getting colder...*`, 'log-warm');
+            }
+            lastDistance = currentDistance;
 
             if (guess === secretNumber) {
                 emojiDisplay.innerText = '🎉'; 
@@ -365,12 +432,12 @@
 
         // --- GAME OVER & PROGRESSION SAVING ---
         function triggerWin(winningPlayerId) { 
-            startConfetti(); 
+            startConfetti(); playSound('win');
             
             let winnerName = winningPlayerId === 1 ? "Player 1" : "Player 2";
             if (!isOnline && winningPlayerId === 2) winnerName = "Robot";
+            if (isOnline && winningPlayerId === myPlayerId) winnerName = "YOU";
             
-            // Build the statistics message
             let statMsg = `<br><br>📊 <b>Match Stats:</b><br>Player 1 used ${p1GuessCount} guesses.<br>`;
             if(isOnline) statMsg += `Player 2 used ${p2GuessCount} guesses.`;
             else statMsg += `Robot used ${p2GuessCount} guesses.`;
@@ -385,22 +452,19 @@
                 if (winningPlayerId === myPlayerId) userProfile.onlineWins++;
                 else userProfile.onlineLosses++;
             }
-            saveProfile();
-            
-            endGame(); 
+            saveProfile(); endGame(); 
         }
         
         function triggerDraw() { 
-            emojiDisplay.innerText = '☠️'; 
+            playSound('lose'); emojiDisplay.innerText = '☠️'; 
             messageEl.innerHTML = `Draw! Secret was <b>${secretNumber}</b>.<br><br>You both ran out of health.<br>P1 used ${p1GuessCount} guesses. P2 used ${p2GuessCount} guesses.`; 
-            
-            // Note: Draw doesn't count as win or loss in our simple system.
             endGame(); 
         }
 
         function endGame() {
-            document.getElementById('input-group').style.display = 'none'; // hide inputs
-            document.getElementById('menu-btn').style.display = 'block'; // show menu button
+            document.getElementById('input-controls').style.display = 'none'; 
+            document.getElementById('surrender-btn').style.display = 'none'; 
+            document.getElementById('menu-btn').style.display = 'block'; 
         }
 
         // --- CONFETTI ---
@@ -418,10 +482,6 @@
             particles.forEach((p) => { p.y+=p.dy; p.x+=p.dx; p.tilt+=0.1; if(p.y<canvas.height) active++; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r, p.y); ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r); ctx.stroke(); });
             if(active>0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0,0,canvas.width,canvas.height);
         }
-        
-        peer && peer.on('connection', (c) => { 
-           c.on('open', () => c.send({type: 'START_GAME', maxRange: maxRange, secret: secretNumber})); 
-        });
         
         userInput.addEventListener("keypress", (e) => { if (e.key === "Enter" && !submitBtn.disabled) { e.preventDefault(); submitBtn.click(); } });
     </script>
