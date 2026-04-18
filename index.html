@@ -2,359 +2,428 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultimate Number Duel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Number Battle - Profile Edition</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        /* --- CSS: VISUALS & MOBILE POLISH --- */
+        /* --- CSS STYLING --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%);
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); 
+            background-size: 400% 400%; animation: gradientBG 15s ease infinite;
             height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center;
-            color: #333; overflow: hidden; touch-action: manipulation;
+            color: #333; overflow: hidden; transition: background-color 0.1s;
         }
-
+        body.damage-flash { background: #ff4d4d !important; }
+        @keyframes gradientBG { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
         .game-card {
-            background-color: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3); text-align: center;
-            max-width: 400px; width: 85%; z-index: 10; position: relative;
+            background-color: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); text-align: center; max-width: 450px; width: 90%; z-index: 10;
         }
-
-        .shake { animation: shake-anim 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake-anim {
-            10%, 90% { transform: translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
-        }
-
-        .emoji-display { font-size: 60px; margin-bottom: 5px; animation: float 3s ease-in-out infinite; }
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+        
+        .emoji-display { font-size: 70px; margin-bottom: 5px; animation: float 3s ease-in-out infinite; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
-        .speech-bubble {
-            background: #f0f4f8; border-radius: 15px; padding: 15px; margin-bottom: 20px;
-            position: relative; font-size: 16px; line-height: 1.4; min-height: 60px;
-        }
-        .speech-bubble::after {
-            content: ''; position: absolute; top: -10px; left: 50%; margin-left: -10px;
-            border-width: 0 10px 10px; border-style: solid; border-color: #f0f4f8 transparent;
-        }
-
-        .status-board {
-            display: none; justify-content: space-between; gap: 10px; margin-bottom: 20px;
-        }
-        .tracker-box {
-            flex: 1; background: #edf2f7; padding: 10px; border-radius: 10px;
-            border: 2px dashed #cbd5e0; font-size: 13px; font-weight: bold; transition: 0.3s;
-        }
-        .tracker-box span { display: block; color: #4a5568; margin-top: 5px; font-size: 15px; }
-        .last-guess { font-size: 11px; color: #718096; margin-top: 8px; font-weight: normal; }
-
-        .active-tracker { background-color: #ebf8ff; border-color: #4299e1; transform: scale(1.05); }
-
-        .setup, .player-input-area, .feedback-controls, .post-game {
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .player-input-area, .feedback-controls, .post-game { display: none; }
-
-        select, input[type="number"] {
-            padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0;
-            outline: none; text-align: center; width: 100%; box-sizing: border-box; -webkit-appearance: none;
-        }
-
-        button {
-            border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px;
-            font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; transition: 0.1s;
-        }
-        button:active { transform: scale(0.95); }
-
-        .btn-start { background-color: #2b6cb0; width: 100%; font-size: 18px; padding: 15px; }
-        .btn-guess { background-color: #e53e3e; }
-        .btn-higher { background-color: #3182ce; flex: 1; }
-        .btn-lower { background-color: #e53e3e; flex: 1; }
-        .btn-correct { background-color: #38a169; width: 100%; margin-top: 10px; }
-        .btn-replay { background-color: #4a5568; width: 100%; font-size: 18px; padding: 15px; }
-
-        .btn-row { display: flex; gap: 10px; flex-direction: column; }
+        
+        .speech-bubble { background: #f0f4f8; border-radius: 15px; padding: 15px; margin-bottom: 20px; position: relative; font-size: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .speech-bubble::after { content: ''; position: absolute; top: -10px; left: 50%; margin-left: -10px; border-width: 0 10px 10px; border-style: solid; border-color: #f0f4f8 transparent; }
+        
+        .health-section, .status-board, .controls, .online-lobby { display: none; gap: 15px; }
+        .health-section { justify-content: space-between; margin-bottom: 15px; }
+        .health-box { flex: 1; text-align: left; font-weight: bold; font-size: 14px; padding: 10px; border-radius: 10px; border: 2px solid transparent; }
+        .active-turn { background-color: #ebf8ff; border: 2px solid #4299e1; }
+        .health-bar-bg { background: #e2e8f0; border-radius: 10px; height: 15px; margin-top: 5px; overflow: hidden; }
+        .health-bar-fill { height: 100%; background: #48bb78; width: 100%; transition: width 0.3s, background-color 0.3s; }
+        
+        .status-board { justify-content: space-between; background: #edf2f7; padding: 10px 20px; border-radius: 10px; font-weight: bold; border: 2px dashed #cbd5e0; margin-bottom: 15px;}
+        .battle-log { display: none; background: #1a202c; color: #a0aec0; height: 100px; overflow-y: auto; border-radius: 10px; padding: 10px; margin-bottom: 15px; font-family: monospace; font-size: 13px; text-align: left; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #2d3748; padding-bottom: 2px;} .log-p1 { color: #63b3ed; } .log-p2 { color: #fc8181; } .log-sys { color: #f6e05e; }
+        
+        .setup, .online-lobby, .controls { flex-direction: column; }
         .input-group { display: flex; gap: 10px; }
-        .input-group input { flex-grow: 1; }
-
+        input[type="number"], input[type="text"] { flex-grow: 1; padding: 12px; font-size: 16px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; text-align: center; }
+        button { border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); } button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+        .btn-blue { background-color: #2b6cb0; width: 100%; } .btn-red { background-color: #e53e3e; white-space: nowrap; } .btn-green { background-color: #38a169; width: 100%;}
+        .btn-gold { background-color: #d69e2e; width: 100%;}
+        
         .number-highlight { font-size: 22px; font-weight: bold; color: #d53f8c; }
         canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .room-code { font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #2b6cb0; padding: 10px; background: #ebf8ff; border-radius: 10px; margin: 10px 0;}
+
+        /* Player Profile Stats Box */
+        .profile-card {
+            background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left; font-size: 14px;
+        }
+        .profile-card input { width: calc(100% - 28px); margin-bottom: 10px; font-weight: bold;}
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-weight: bold; color: #4a5568;}
     </style>
 </head>
 <body>
-
     <canvas id="confetti"></canvas>
-
     <div class="game-card" id="game-card">
+        <div class="emoji-display" id="emoji-display">🏆</div>
+        <div class="speech-bubble" id="message">Welcome back! Check your stats or jump into a game.</div>
 
-        <div class="emoji-display" id="emoji-display">⚔️</div>
-        <div class="speech-bubble" id="message">
-            The Ultimate Duel! Choose my intelligence level, then think of a secret number (1-100).
+        <div class="setup" id="setup-menu">
+            <div class="profile-card">
+                <label>👤 Username:</label>
+                <input type="text" id="username-input" placeholder="Enter name" onchange="saveProfile()">
+                <div class="stats-grid">
+                    <div>Win (vs AI): <span id="stat-local-win">0</span></div>
+                    <div>Loss (vs AI): <span id="stat-robot-win">0</span></div>
+                    <div>Win (Online): <span id="stat-online-win">0</span></div>
+                    <div>Loss (Online): <span id="stat-online-loss">0</span></div>
+                </div>
+            </div>
+
+            <button class="btn-blue" onclick="startLocalGame()">Play Local (Vs AI)</button>
+            <button class="btn-green" onclick="showOnlineLobby()">Play Online (Phones/WiFi)</button>
+            <button class="btn-gold" onclick="resetStats()">Reset Stats</button>
+        </div>
+
+        <div class="online-lobby" id="online-lobby">
+            <div id="host-section">
+                <button class="btn-blue" onclick="hostOnlineGame()">Create Room (Host)</button>
+                <div id="room-code-display" style="display:none;">
+                    <p>Give this code to Player 2:</p>
+                    <div class="room-code" id="my-code">----</div>
+                    <p>Waiting for connection...</p>
+                </div>
+            </div>
+            <hr style="width: 100%; border: 1px solid #e2e8f0; margin: 15px 0;">
+            <div id="join-section">
+                <div class="input-group">
+                    <input type="text" id="join-code" placeholder="Enter 4-Digit Code" maxlength="4" style="text-transform: uppercase;">
+                    <button class="btn-green" onclick="joinOnlineGame()">Join</button>
+                </div>
+            </div>
+            <button class="btn-red" style="margin-top:10px;" onclick="cancelOnline()">Back</button>
+        </div>
+
+        <div class="health-section" id="health-section">
+            <div class="health-box" id="p1-box">
+                <span id="p1-label">🧑 P1</span> (<span id="p1-hp-text"></span>)
+                <div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div>
+            </div>
+            <div class="health-box" id="p2-box">
+                <span id="p2-label">🧑 P2</span> (<span id="p2-hp-text"></span>)
+                <div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div>
+            </div>
         </div>
 
         <div class="status-board" id="status-board">
-            <div class="tracker-box" id="robot-tracker">
-                🤖 Robot's Num
-                <span id="robot-bounds">1 - 100</span>
-                <div class="last-guess" id="last-player-guess">Last Guess: --</div>
-            </div>
-            <div class="tracker-box" id="player-tracker">
-                🧑 Your Num
-                <span id="player-bounds">1 - 100</span>
-                <div class="last-guess" id="last-robot-guess">Last Guess: --</div>
-            </div>
+            <span>Min: <span id="min-display">1</span></span>
+            <span>Max: <span id="max-display">100</span></span>
         </div>
 
-        <div class="setup" id="setup-controls">
-            <select id="ai-mode">
-                <option value="random">Easy AI: Randomizer</option>
-                <option value="binary" selected>Normal AI: Binary Search</option>
-                <option value="complex">Hard AI: Complex / Golden Ratio</option>
-            </select>
-            <button class="btn-start" onclick="startGame()">I have my number. Start Duel!</button>
-        </div>
+        <div class="battle-log" id="battle-log"></div>
 
-        <div class="player-input-area" id="player-input-area">
+        <div class="controls" id="controls">
             <div class="input-group">
-                <input type="number" id="player-guess" placeholder="Guess my number..." pattern="\d*">
-                <button class="btn-guess" onclick="submitPlayerGuess()">FIRE!</button>
+                <input type="number" id="user-input" placeholder="Enter guess...">
+                <button class="btn-red" id="submit-btn" onclick="handleUserGuess()">FIRE!</button>
             </div>
+            <button class="btn-blue" id="menu-btn" style="display:none;" onclick="location.reload()">Back to Menu</button>
         </div>
-
-        <div class="feedback-controls" id="feedback-controls">
-            <div class="btn-row">
-                <button class="btn-higher" onclick="giveFeedback('higher')">My number is HIGHER ⬆️</button>
-                <button class="btn-lower" onclick="giveFeedback('lower')">My number is LOWER ⬇️</button>
-            </div>
-            <button class="btn-correct" onclick="giveFeedback('correct')">That is Correct! 🎉</button>
-        </div>
-
-        <div class="post-game" id="post-game-controls">
-            <button class="btn-replay" onclick="resetGameUI()">Play Again</button>
-        </div>
-
     </div>
 
     <script>
-        let robotSecretNumber;
-        let robotAiMode;
+        // --- GAME & TRACKING STATE ---
+        let secretNumber, low, high, p1Hp, p2Hp;
+        let p1GuessCount = 0; let p2GuessCount = 0;
+        let maxGuesses = 7; let maxRange = 100; 
+        let activePlayer = 1; 
+        
+        let peer = null; let conn = null; 
+        let isOnline = false; let myPlayerId = 1; 
 
-        let pLow = 1, pHigh = 100; // What the player is guessing between
-        let rLow = 1, rHigh = 100; // What the robot is guessing between
-        let currentRobotGuess = 0;
+        // --- LOCAL STORAGE PROFILE ---
+        let userProfile = JSON.parse(localStorage.getItem('numbattle_profile')) || {
+            username: "Player",
+            localWins: 0,
+            robotWins: 0,
+            onlineWins: 0,
+            onlineLosses: 0
+        };
 
+        // Initialize Menu UI with saved data
+        document.getElementById('username-input').value = userProfile.username;
+        updateProfileUI();
+
+        function updateProfileUI() {
+            document.getElementById('stat-local-win').innerText = userProfile.localWins;
+            document.getElementById('stat-robot-win').innerText = userProfile.robotWins;
+            document.getElementById('stat-online-win').innerText = userProfile.onlineWins;
+            document.getElementById('stat-online-loss').innerText = userProfile.onlineLosses;
+        }
+
+        function saveProfile() {
+            let name = document.getElementById('username-input').value.trim();
+            if(name) userProfile.username = name;
+            localStorage.setItem('numbattle_profile', JSON.stringify(userProfile));
+        }
+
+        function resetStats() {
+            if(confirm("Are you sure you want to reset all your wins and losses?")) {
+                userProfile = { username: userProfile.username, localWins: 0, robotWins: 0, onlineWins: 0, onlineLosses: 0 };
+                saveProfile(); updateProfileUI();
+            }
+        }
+
+        // --- DOM Elements ---
         const messageEl = document.getElementById('message');
-        const setupControls = document.getElementById('setup-controls');
-        const playerInputArea = document.getElementById('player-input-area');
-        const feedbackControls = document.getElementById('feedback-controls');
-        const postGameControls = document.getElementById('post-game-controls');
+        const setupMenu = document.getElementById('setup-menu');
+        const onlineLobby = document.getElementById('online-lobby');
+        const controlsEl = document.getElementById('controls');
+        const healthSection = document.getElementById('health-section');
         const statusBoard = document.getElementById('status-board');
+        const battleLog = document.getElementById('battle-log');
         const emojiDisplay = document.getElementById('emoji-display');
-        const playerGuessInput = document.getElementById('player-guess');
+        const userInput = document.getElementById('user-input');
+        const submitBtn = document.getElementById('submit-btn');
         const gameCard = document.getElementById('game-card');
 
-        const robotTracker = document.getElementById('robot-tracker');
-        const playerTracker = document.getElementById('player-tracker');
-        const robotBoundsDisplay = document.getElementById('robot-bounds');
-        const playerBoundsDisplay = document.getElementById('player-bounds');
-        const lastPlayerGuessDisplay = document.getElementById('last-player-guess');
-        const lastRobotGuessDisplay = document.getElementById('last-robot-guess');
-
-        function shakeScreen() {
+        // --- JUICE & LOGGING ---
+        function triggerDamageJuice() {
             gameCard.classList.remove('shake'); void gameCard.offsetWidth; gameCard.classList.add('shake');
+            document.body.classList.add('damage-flash'); setTimeout(() => document.body.classList.remove('damage-flash'), 150);
+        }
+        function appendLog(text, typeClass) {
+            const entry = document.createElement('div'); entry.className = `log-entry ${typeClass}`;
+            entry.innerHTML = `> ${text}`; battleLog.appendChild(entry); battleLog.scrollTop = battleLog.scrollHeight;
         }
 
-        function updateBoard() {
-            robotBoundsDisplay.innerText = `${pLow} - ${pHigh}`;
-            playerBoundsDisplay.innerText = `${rLow} - ${rHigh}`;
+        // --- UI TRANSITIONS ---
+        function showOnlineLobby() { setupMenu.style.display = 'none'; onlineLobby.style.display = 'flex'; messageEl.innerHTML = "Host a room or join a friend!"; }
+        function cancelOnline() { if(peer) peer.destroy(); onlineLobby.style.display = 'none'; setupMenu.style.display = 'flex'; document.getElementById('room-code-display').style.display = 'none'; }
+
+        // --- NETWORKING ---
+        function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+
+        function hostOnlineGame() {
+            saveProfile(); // Save name before starting
+            const roomCode = generateRoomCode();
+            document.getElementById('my-code').innerText = roomCode;
+            document.getElementById('room-code-display').style.display = 'block';
+            
+            peer = new Peer('numbattle-' + roomCode);
+            peer.on('open', () => appendLog(`Room ${roomCode} opened...`, 'log-sys'));
+
+            peer.on('connection', (connection) => {
+                conn = connection; setupNetworkListeners();
+                isOnline = true; myPlayerId = 1; 
+                secretNumber = Math.floor(Math.random() * maxRange) + 1;
+                
+                conn.on('open', () => {
+                    conn.send({ type: 'START_GAME', maxRange: maxRange, secret: secretNumber, opponentName: userProfile.username });
+                    initGameUI(`Connected! Your opponent joined.`);
+                });
+            });
         }
 
-        function startGame() {
-            robotAiMode = document.getElementById('ai-mode').value;
-            robotSecretNumber = Math.floor(Math.random() * 100) + 1;
-
-            console.log(`🤖 DEVELOPER MODE: The Robot's secret number is ${robotSecretNumber}`);
-            window.history.replaceState(null, null, `#debug=${robotSecretNumber}`);
-
-            pLow = 1; pHigh = 100; rLow = 1; rHigh = 100;
-            lastPlayerGuessDisplay.innerText = "Last Guess: --";
-            lastRobotGuessDisplay.innerText = "Last Guess: --";
-
-            setupControls.style.display = 'none';
-            postGameControls.style.display = 'none';
-            statusBoard.style.display = 'flex';
-            updateBoard();
-
-            startPlayerTurn();
+        function joinOnlineGame() {
+            saveProfile();
+            let code = document.getElementById('join-code').value.toUpperCase();
+            if(code.length !== 4) return alert("Code must be 4 characters!");
+            
+            messageEl.innerHTML = "Connecting...";
+            peer = new Peer(); 
+            peer.on('open', () => {
+                conn = peer.connect('numbattle-' + code);
+                setupNetworkListeners();
+            });
         }
 
-        // --- PLAYER'S TURN ---
-        function startPlayerTurn() {
-            feedbackControls.style.display = 'none';
-            robotTracker.classList.add('active-tracker');
-            playerTracker.classList.remove('active-tracker');
-
-            emojiDisplay.innerText = '🧑';
-            messageEl.innerHTML = `<b>Your turn!</b><br>Try to guess my secret number!`;
-
-            playerGuessInput.value = '';
-            playerInputArea.style.display = 'flex';
-            // Only auto-focus on desktop to avoid jarring mobile jumps
-            if(window.innerWidth > 768) playerGuessInput.focus();
-        }
-
-        function submitPlayerGuess() {
-            let guess = parseInt(playerGuessInput.value);
-            playerGuessInput.blur();
-
-            if (isNaN(guess) || guess < 1 || guess > 100) {
-                shakeScreen(); messageEl.innerHTML = "Please guess a valid number between 1 and 100!"; return;
-            }
-
-            playerInputArea.style.display = 'none';
-            lastPlayerGuessDisplay.innerText = `Last Guess: ${guess}`;
-
-            if (guess === robotSecretNumber) {
-                triggerWin("You", guess);
-                return;
-            }
-
-            shakeScreen();
-            if (guess > robotSecretNumber) {
-                if (guess <= pHigh) pHigh = guess - 1;
-                emojiDisplay.innerText = '🛡️';
-                messageEl.innerHTML = `You guessed ${guess}... <b>TOO HIGH!</b><br><br>Now it's my turn.`;
-            } else {
-                if (guess >= pLow) pLow = guess + 1;
-                emojiDisplay.innerText = '🛡️';
-                messageEl.innerHTML = `You guessed ${guess}... <b>TOO LOW!</b><br><br>Now it's my turn.`;
-            }
-
-            updateBoard();
-            setTimeout(startRobotTurn, 1500);
-        }
-
-        // --- ENTER KEY FIX ---
-        playerGuessInput.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                submitPlayerGuess();
-            }
-        });
-
-        // --- ROBOT'S TURN ---
-        function calculateRobotGuess() {
-            if (robotAiMode === 'random') {
-                return Math.floor(Math.random() * (rHigh - rLow + 1)) + rLow;
-            } else if (robotAiMode === 'binary') {
-                return Math.floor((rLow + rHigh) / 2);
-            } else if (robotAiMode === 'complex') {
-                const traps = [69, 73, 42, 37, 7, 99, 88, 25, 75];
-                for (let t of traps) {
-                    if (t >= rLow && t <= rHigh && Math.random() > 0.4) return t;
+        function setupNetworkListeners() {
+            conn.on('data', (data) => {
+                if (data.type === 'START_GAME') {
+                    isOnline = true; myPlayerId = 2; maxRange = data.maxRange; secretNumber = data.secret;
+                    initGameUI(`Connected to Host!`);
+                    
+                    // Send my name back to host
+                    conn.send({ type: 'SYNC_NAME', opponentName: userProfile.username });
+                } 
+                else if (data.type === 'GUESS') processGuess(data.player, data.value);
+                else if (data.type === 'SYNC_NAME') {
+                     // Minor UI polish to show opponent name in log
+                     appendLog(`Opponent is: ${data.opponentName}`, 'log-sys');
                 }
-                let range = rHigh - rLow;
-                return Math.random() > 0.5 ? rLow + Math.floor(range * 0.618) : rLow + Math.floor(range * 0.382);
-            }
+            });
+            conn.on('close', () => { alert("Opponent disconnected!"); location.reload(); });
         }
 
-        function startRobotTurn() {
-            robotTracker.classList.remove('active-tracker');
-            playerTracker.classList.add('active-tracker');
-
-            emojiDisplay.innerText = '🧠';
-            messageEl.innerHTML = "Calculating my search parameters...";
-
-            setTimeout(() => {
-                currentRobotGuess = calculateRobotGuess();
-                lastRobotGuessDisplay.innerText = `Last Guess: ${currentRobotGuess}`;
-
-                emojiDisplay.innerText = '🤖';
-                messageEl.innerHTML = `Is your secret number... <br><span class="number-highlight">${currentRobotGuess}</span> ?`;
-
-                feedbackControls.style.display = 'flex';
-            }, 1000);
+        // --- GAME ENGINE ---
+        function startLocalGame() {
+            saveProfile();
+            isOnline = false; myPlayerId = 1;
+            secretNumber = Math.floor(Math.random() * maxRange) + 1;
+            document.getElementById('p2-label').innerText = "🤖 Robot";
+            initGameUI("Local game started! Defeat the AI.");
         }
 
-        function giveFeedback(feedback) {
-            if (feedback === 'correct') {
-                feedbackControls.style.display = 'none';
-                triggerWin("The Robot", currentRobotGuess);
-                return;
+        function initGameUI(msg) {
+            setupMenu.style.display = 'none'; onlineLobby.style.display = 'none';
+            controlsEl.style.display = 'flex'; statusBoard.style.display = 'flex';
+            healthSection.style.display = 'flex'; battleLog.style.display = 'block';
+            
+            low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; 
+            p1GuessCount = 0; p2GuessCount = 0; activePlayer = 1; 
+            
+            if(isOnline) {
+                document.getElementById('p1-label').innerText = myPlayerId === 1 ? `🧑 YOU` : `🧑 Opponent`;
+                document.getElementById('p2-label').innerText = myPlayerId === 2 ? `🧑 YOU` : `🧑 Opponent`;
+            } else {
+                document.getElementById('p1-label').innerText = `🧑 ${userProfile.username}`;
+            }
+            
+            userInput.setAttribute('max', maxRange); 
+            updateBoard(); updateHealth(); checkTurnLock();
+            
+            emojiDisplay.innerText = '⚔️'; 
+            messageEl.innerHTML = msg + `<br><b>Player 1</b> goes first!`; 
+        }
+
+        function updateBoard() { document.getElementById('min-display').innerText = low; document.getElementById('max-display').innerText = high; }
+
+        function updateHealth() {
+            const p1Pct = (p1Hp / maxGuesses) * 100; const p2Pct = (p2Hp / maxGuesses) * 100;
+            document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp;
+            document.getElementById('p1-hp-bar').style.width = `${p1Pct}%`; document.getElementById('p2-hp-bar').style.width = `${p2Pct}%`;
+        }
+
+        function checkTurnLock() {
+            document.getElementById('p1-box').classList.remove('active-turn'); document.getElementById('p2-box').classList.remove('active-turn');
+            if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn');
+            else document.getElementById('p2-box').classList.add('active-turn');
+
+            let isMyTurn = isOnline ? (activePlayer === myPlayerId) : (activePlayer === 1);
+            userInput.disabled = !isMyTurn; submitBtn.disabled = !isMyTurn;
+            if(isMyTurn) userInput.focus();
+        }
+
+        function handleUserGuess() {
+            let guess = parseInt(userInput.value);
+            if (isNaN(guess) || guess < low || guess > high) return alert(`Guess between ${low} and ${high}!`);
+            if (isOnline) conn.send({ type: 'GUESS', player: myPlayerId, value: guess });
+            processGuess(myPlayerId, guess);
+            userInput.value = '';
+        }
+
+        function processGuess(playerWhoGuessed, guess) {
+            let pName = playerWhoGuessed === 1 ? "P1" : "P2";
+            let logClass = playerWhoGuessed === 1 ? "log-p1" : "log-p2";
+            
+            // TRACK GUESSES
+            if (playerWhoGuessed === 1) p1GuessCount++; else p2GuessCount++;
+
+            if (guess === secretNumber) {
+                emojiDisplay.innerText = '🎉'; 
+                appendLog(`${pName} guessed ${guess}. TARGET ACQUIRED!`, logClass);
+                triggerWin(playerWhoGuessed); return;
             }
 
-            let testRLow = rLow;
-            let testRHigh = rHigh;
+            if (playerWhoGuessed === 1) p1Hp--; else p2Hp--;
+            updateHealth(); triggerDamageJuice();
 
-            // THE CORRECTED LOGIC: "My number is HIGHER/LOWER than your guess"
-            if (feedback === 'higher') testRLow = currentRobotGuess + 1;
-            else if (feedback === 'lower') testRHigh = currentRobotGuess - 1;
+            if (p1Hp <= 0 && p2Hp <= 0) { triggerDraw(); return; }
 
-            if (testRLow > testRHigh || testRLow > 100 || testRHigh < 1) {
-                shakeScreen();
-                emojiDisplay.innerText = '🤨';
-                let direction = feedback === 'higher' ? 'HIGHER' : 'LOWER';
-                messageEl.innerHTML = `<b>Wait!</b> If your number is between ${rLow} and ${rHigh}, it mathematically can't be <b>${direction}</b> than ${currentRobotGuess}! <br><br>Try clicking the correct hint.`;
-                return;
+            if (guess > secretNumber) {
+                if (guess <= high) high = guess - 1; 
+                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO HIGH!</b>`;
+                appendLog(`${pName} guessed ${guess}. TOO HIGH.`, logClass);
+            } else {
+                if (guess >= low) low = guess + 1; 
+                emojiDisplay.innerText = '🛡️'; messageEl.innerHTML = `${pName} guessed ${guess}. <b>TOO LOW!</b>`;
+                appendLog(`${pName} guessed ${guess}. TOO LOW.`, logClass);
             }
-
-            feedbackControls.style.display = 'none';
-            rLow = testRLow;
-            rHigh = testRHigh;
 
             updateBoard();
-            emojiDisplay.innerText = '🤖';
-            messageEl.innerHTML = `Got it. So your number is between ${rLow} and ${rHigh}.`;
-            setTimeout(startPlayerTurn, 1200);
+            
+            activePlayer = activePlayer === 1 ? 2 : 1;
+            if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2; 
+            if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
+
+            let nextPName = activePlayer === 1 ? "P1" : "P2";
+            messageEl.innerHTML += `<br><br><b>${nextPName}'s</b> Turn!`; 
+            
+            checkTurnLock();
+            if (!isOnline && activePlayer === 2) setTimeout(robotTurn, 1500); 
         }
 
-        // --- WIN LOGIC & RESTART ---
-        function triggerWin(winner, winningNumber) {
-            startConfetti();
-            playerTracker.classList.remove('active-tracker');
-            robotTracker.classList.remove('active-tracker');
+        function robotTurn() {
+            if (p2Hp <= 0) { activePlayer = 1; checkTurnLock(); return; }
+            emojiDisplay.innerText = '🧠'; 
+            setTimeout(() => {
+                let robotGuess = Math.floor((low + high) / 2); 
+                if (robotGuess < low) robotGuess = low; if (robotGuess > high) robotGuess = high;
+                processGuess(2, robotGuess);
+            }, 1000); 
+        }
 
-            emojiDisplay.innerText = winner === "You" ? '🎉' : '👑';
+        // --- GAME OVER & PROGRESSION SAVING ---
+        function triggerWin(winningPlayerId) { 
+            startConfetti(); 
+            
+            let winnerName = winningPlayerId === 1 ? "Player 1" : "Player 2";
+            if (!isOnline && winningPlayerId === 2) winnerName = "Robot";
+            
+            // Build the statistics message
+            let statMsg = `<br><br>📊 <b>Match Stats:</b><br>Player 1 used ${p1GuessCount} guesses.<br>`;
+            if(isOnline) statMsg += `Player 2 used ${p2GuessCount} guesses.`;
+            else statMsg += `Robot used ${p2GuessCount} guesses.`;
 
-            if (winner === "You") {
-                messageEl.innerHTML = `<b>YOU WIN!</b><br>You cracked my secret number <span class="number-highlight">${winningNumber}</span>!`;
+            messageEl.innerHTML = `<b>${winnerName} WINS!</b> The number was ${secretNumber}.${statMsg}`;
+
+            // Save to Profile Database
+            if (!isOnline) {
+                if (winningPlayerId === 1) userProfile.localWins++;
+                else userProfile.robotWins++;
             } else {
-                messageEl.innerHTML = `<b>I WIN!</b><br>I successfully found your number <span class="number-highlight">${winningNumber}</span>!`;
+                if (winningPlayerId === myPlayerId) userProfile.onlineWins++;
+                else userProfile.onlineLosses++;
             }
-
-            window.history.replaceState(null, null, ' ');
-            postGameControls.style.display = 'flex';
+            saveProfile();
+            
+            endGame(); 
+        }
+        
+        function triggerDraw() { 
+            emojiDisplay.innerText = '☠️'; 
+            messageEl.innerHTML = `Draw! Secret was <b>${secretNumber}</b>.<br><br>You both ran out of health.<br>P1 used ${p1GuessCount} guesses. P2 used ${p2GuessCount} guesses.`; 
+            
+            // Note: Draw doesn't count as win or loss in our simple system.
+            endGame(); 
         }
 
-        function resetGameUI() {
-            statusBoard.style.display = 'none';
-            postGameControls.style.display = 'none';
-            playerInputArea.style.display = 'none';
-            feedbackControls.style.display = 'none';
-
-            emojiDisplay.innerText = '⚔️';
-            messageEl.innerHTML = `The Ultimate Duel! Choose my intelligence level, then think of a secret number (1-100).`;
-            setupControls.style.display = 'flex';
+        function endGame() {
+            document.getElementById('input-group').style.display = 'none'; // hide inputs
+            document.getElementById('menu-btn').style.display = 'block'; // show menu button
         }
 
-        // --- CONFETTI ANIMATION ---
+        // --- CONFETTI ---
         const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d");
         let particles = []; let confettiActive = false;
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener("resize", resizeCanvas); resizeCanvas();
-
         function startConfetti() {
             confettiActive = true; particles = [];
-            for (let i = 0; i < 150; i++) particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height, r: Math.random() * 6 + 4, dx: Math.random() * 4 - 2, dy: Math.random() * 5 + 2, color: `hsl(${Math.random() * 360}, 100%, 50%)`, tilt: Math.random() * 10 - 10 });
-            requestAnimationFrame(drawConfetti); setTimeout(() => { confettiActive = false; }, 4000);
+            for(let i=0; i<100; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, r: Math.random()*6+4, dx: Math.random()*4-2, dy: Math.random()*5+2, color: `hsl(${Math.random()*360}, 100%, 50%)`, tilt: Math.random()*10-10 });
+            requestAnimationFrame(drawConfetti); setTimeout(() => confettiActive=false, 4000);
         }
         function drawConfetti() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); let activeParticles = 0;
-            particles.forEach((p) => { p.y += p.dy; p.x += p.dx; p.tilt += 0.1; if (p.y < canvas.height) activeParticles++;
-                ctx.beginPath(); ctx.lineWidth = p.r; ctx.strokeStyle = p.color; ctx.moveTo(p.x + p.tilt + p.r, p.y); ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r); ctx.stroke(); });
-            if (activeParticles > 0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0,0,canvas.width,canvas.height); let active=0;
+            particles.forEach((p) => { p.y+=p.dy; p.x+=p.dx; p.tilt+=0.1; if(p.y<canvas.height) active++; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r, p.y); ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r); ctx.stroke(); });
+            if(active>0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0,0,canvas.width,canvas.height);
         }
+        
+        peer && peer.on('connection', (c) => { 
+           c.on('open', () => c.send({type: 'START_GAME', maxRange: maxRange, secret: secretNumber})); 
+        });
+        
+        userInput.addEventListener("keypress", (e) => { if (e.key === "Enter" && !submitBtn.disabled) { e.preventDefault(); submitBtn.click(); } });
     </script>
 </body>
 </html>
