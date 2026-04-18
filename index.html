@@ -1,475 +1,1262 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f2027">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Ultimate Number Battle</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        /* --- CSS STYLING --- */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); background-size: 400% 400%; animation: gradientBG 15s ease infinite; height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; color: #333; overflow: hidden; transition: background-color 0.1s; }
-        body.damage-flash { background: #ff4d4d !important; }
-        @keyframes gradientBG { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        .game-card { background-color: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); text-align: center; max-width: 420px; width: 95%; z-index: 10; position: relative; max-height: 95vh; display: flex; flex-direction: column; }
-        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
-        .emoji-display { font-size: 50px; margin-bottom: 5px; flex-shrink: 0; animation: float 3s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        .speech-bubble { background: #f0f4f8; border-radius: 15px; padding: 10px; margin-bottom: 10px; position: relative; font-size: 14px; flex-shrink: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
-        .speech-bubble::after { content: ''; position: absolute; top: -10px; left: 50%; margin-left: -10px; border-width: 0 10px 10px; border-style: solid; border-color: #f0f4f8 transparent; }
-        .health-section, .status-board, .controls, .online-lobby { display: none; gap: 10px; flex-shrink: 0;}
-        .health-section { justify-content: space-between; margin-bottom: 10px; }
-        .health-box { flex: 1; text-align: left; font-weight: bold; font-size: 12px; padding: 8px; border-radius: 10px; border: 2px solid transparent; }
-        .active-turn { background-color: #ebf8ff; border: 2px solid #4299e1; }
-        .health-bar-bg { background: #e2e8f0; border-radius: 10px; height: 10px; margin-top: 5px; overflow: hidden; }
-        .health-bar-fill { height: 100%; background: #48bb78; width: 100%; transition: width 0.3s, background-color 0.3s; }
-        .status-board { justify-content: space-between; background: #edf2f7; padding: 8px 15px; border-radius: 10px; font-weight: bold; border: 2px dashed #cbd5e0; margin-bottom: 5px;}
-        .battle-log { display: none; background: #1a202c; color: #a0aec0; height: 60px; overflow-y: auto; border-radius: 10px; padding: 8px; margin-bottom: 10px; font-family: monospace; font-size: 11px; text-align: left; flex-shrink: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
-        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #2d3748; padding-bottom: 2px;} .log-p1 { color: #63b3ed; } .log-p2 { color: #fc8181; } .log-sys { color: #f6e05e; }
-        .setup, .online-lobby, .controls { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
-        input[type="text"], select { padding: 10px; font-size: 14px; border-radius: 10px; border: 2px solid #cbd5e0; outline: none; font-family: inherit; margin-bottom: 10px; width: 100%; box-sizing: border-box;}
-        button { border: none; border-radius: 10px; padding: 10px 15px; font-size: 14px; font-weight: bold; cursor: pointer; color: white; transition: transform 0.1s; touch-action: manipulation;}
-        button:active { transform: scale(0.95); } button:disabled { background-color: #a0aec0; cursor: not-allowed; }
-        .btn-blue { background-color: #2b6cb0; width: 100%; margin-bottom: 5px;} .btn-red { background-color: #e53e3e; } .btn-green { background-color: #38a169; width: 100%; margin-bottom: 5px;} .btn-gray { background-color: #718096; width: 100%;}
-        .mute-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; font-size: 20px; cursor: pointer; color: #333; padding: 0;}
-        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-        .room-code { font-size: 20px; font-weight: bold; letter-spacing: 4px; color: #2b6cb0; padding: 5px; background: #ebf8ff; border-radius: 10px; margin: 5px 0;}
-        .profile-card { background: #edf2f7; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; font-size: 12px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-weight: bold; color: #4a5568;}
-        .fake-input { background: #edf2f7; padding: 8px; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid #cbd5e0; text-align: center; color: #2d3748; min-height: 25px; letter-spacing: 2px; margin-bottom: 5px;}
-        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .numpad button { background: #4a5568; padding: 12px; font-size: 16px; }
-        .numpad .btn-red { background: #e53e3e; grid-column: span 2; }
-        .numpad .btn-gray { background: #718096; }
-        .feedback-controls { display: none; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .feedback-controls .btn-correct { grid-column: span 2; background: #38a169; padding: 12px; font-size: 16px;}
-        .highlight { font-size: 18px; font-weight: bold; color: #d53f8c; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ultimate Number Battle</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    /* CSS Variables */
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --text-color: #f8fafc;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --font-main: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at center, #1e293b, #020617);
+      color: var(--text-color);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #confetti {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .glass {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Modals & Overlays */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .modal {
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal h2 {
+      margin-bottom: 1rem;
+      font-weight: 800;
+      font-size: 2rem;
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      font-family: var(--font-main);
+      font-size: 1.1rem;
+      text-align: center;
+      outline: none;
+    }
+
+    .avatar-select {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 1.5rem;
+    }
+
+    .avatar-option {
+      font-size: 2.5rem;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.2s;
+    }
+
+    .avatar-option.selected {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 600;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn.danger {
+      background: var(--danger);
+    }
+
+    .btn.success {
+      background: var(--success);
+    }
+
+    .btn.warning {
+      background: var(--warning);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Main Menu */
+    #main-menu {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(to right, #3b82f6, #ec4899);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .stats {
+      font-size: 1rem;
+      color: #94a3b8;
+      margin-top: 0.5rem;
+    }
+
+    .menu-buttons {
+      width: 100%;
+      max-width: 350px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Game UI */
+    #game-ui {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .player-avatar {
+      font-size: 1.5rem;
+    }
+
+    .player-name {
+      font-weight: 600;
+    }
+
+    .hp-bar {
+      display: flex;
+      gap: 2px;
+      margin-top: 4px;
+    }
+
+    .hp-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--glass-border);
+    }
+
+    .hp-dot.active {
+      background: var(--danger);
+      box-shadow: 0 0 5px var(--danger);
+    }
+
+    .hp-dot.active.p1 {
+      background: var(--accent);
+      box-shadow: 0 0 5px var(--accent);
+    }
+
+    .battle-log {
+      flex: 1;
+      margin: 1rem 0;
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .log-entry {
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      font-size: 0.95rem;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    .log-entry.system {
+      color: var(--warning);
+      text-align: center;
+      background: none;
+    }
+
+    .log-entry.p1 {
+      border-left: 4px solid var(--accent);
+    }
+
+    .log-entry.p2 {
+      border-right: 4px solid var(--danger);
+      text-align: right;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .controls-area {
+      min-height: 250px;
+    }
+
+    /* Virtual Numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .num-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 1.5rem;
+      color: white;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .num-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .num-btn.span-2 {
+      grid-column: span 2;
+    }
+
+    .num-btn.enter {
+      background: var(--success);
+      font-weight: bold;
+    }
+
+    .current-guess-display {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 800;
+      height: 60px;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    /* Judgment Controls (Reverse PvE / Host Feedback) */
+    .judgment-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .judg-btn {
+      padding: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 12px;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .judg-btn.high {
+      background: var(--danger);
+    }
+
+    .judg-btn.low {
+      background: var(--accent);
+    }
+
+    .judg-btn.correct {
+      background: var(--success);
+      grid-column: span 2;
+    }
+
+    .shake {
+      animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+    }
+
+    @keyframes shake {
+
+      10%,
+      90% {
+        transform: translate3d(-1px, 0, 0);
+      }
+
+      20%,
+      80% {
+        transform: translate3d(2px, 0, 0);
+      }
+
+      30%,
+      50%,
+      70% {
+        transform: translate3d(-4px, 0, 0);
+      }
+
+      40%,
+      60% {
+        transform: translate3d(4px, 0, 0);
+      }
+    }
+
+    /* Top actions (mute, exit) */
+    .global-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 40;
+    }
+
+    .icon-btn {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--glass-border);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2rem;
+    }
+
+    /* Setup Mode Views */
+    #setup-mode,
+    #online-lobby {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      height: 100%;
+      justify-content: center;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .code-display {
+      font-size: 3rem;
+      letter-spacing: 5px;
+      font-weight: 800;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+  </style>
 </head>
+
 <body>
-    <canvas id="confetti"></canvas>
-    
-    <div class="game-card" id="game-card">
-        <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">🔊</button>
-        <div class="emoji-display" id="emoji-display">📱</div>
-        <div class="speech-bubble" id="message">Select your mode and AI Algorithm!</div>
 
-        <div class="setup" id="setup-menu">
-            <div class="profile-card">
-                <div style="display:flex; gap:5px;">
-                    <select id="avatar-input" style="width: 25%; margin-bottom:0;" onchange="saveProfile()">
-                        <option value="🧑">🧑</option><option value="🐱">🐱</option><option value="🤖">🤖</option><option value="👽">👽</option>
-                    </select>
-                    <input type="text" id="username-input" style="width: 75%; margin-bottom:0;" placeholder="Your Name" onchange="saveProfile()">
-                </div>
-                <div class="stats-grid" style="margin-top: 5px;">
-                    <div>Local Wins: <span id="stat-local-win">0</span></div>
-                    <div>Online Wins: <span id="stat-online-win">0</span></div>
-                </div>
-            </div>
-            
-            <select id="game-mode">
-                <option value="pve">Mode 1: You Guess Robot's Number</option>
-                <option value="reverse">Mode 2: You Judge Robot's Guesses</option>
-                <option value="pvp_manual">Mode 3: True PvP (P1 Thinks, P2 Guesses)</option>
-            </select>
+  <!-- Confetti Canvas -->
+  <canvas id="confetti"></canvas>
 
-            <select id="ai-algorithm">
-                <option value="easy">Robot Brain: Random (Easy)</option>
-                <option value="normal" selected>Robot Brain: Binary (Normal)</option>
-                <option value="hard">Robot Brain: Golden Ratio (Hard)</option>
-                <option value="expert">Robot Brain: Interpolation (Expert)</option>
-            </select>
+  <!-- Global Actions -->
+  <div class="global-actions">
+    <button id="btn-mute" class="icon-btn">🔊</button>
+  </div>
 
-            <button class="btn-blue" onclick="startGame()">Start Local Game</button>
-            <button class="btn-green" onclick="showOnlineLobby()">Play Online (P2P)</button>
-        </div>
+  <!-- Profile Setup Modal -->
+  <div id="profile-modal" class="overlay">
+    <div class="modal glass">
+      <h2>Welcome Player</h2>
+      <div class="avatar-select" id="avatar-select">
+        <div class="avatar-option selected" data-avatar="🧑">🧑</div>
+        <div class="avatar-option" data-avatar="🐱">🐱</div>
+        <div class="avatar-option" data-avatar="🤖">🤖</div>
+        <div class="avatar-option" data-avatar="👽">👽</div>
+      </div>
+      <input type="text" id="input-username" placeholder="Enter Username" maxlength="12">
+      <button id="btn-save-profile" class="btn">Start Battle</button>
+    </div>
+  </div>
 
-        <div class="online-lobby" id="online-lobby">
-            <button class="btn-blue" onclick="hostOnlineGame()">Create Room</button>
-            <div id="room-code-display" style="display:none;">Code:<div class="room-code" id="my-code">----</div></div>
-            <hr style="width: 100%; border: 1px solid #e2e8f0; margin: 5px 0;">
-            <input type="text" id="join-code" placeholder="Enter 4-Digit Code" maxlength="4">
-            <button class="btn-green" onclick="joinOnlineGame()">Join Room</button>
-            <button class="btn-gray" onclick="cancelOnline()">Back</button>
-        </div>
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <div class="header">
+      <h1>ULTIMATE<br>NUMBER<br>BATTLE</h1>
+      <div class="stats" id="menu-stats">Wins: 0 Local | 0 Online</div>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn" onclick="Game.startSetup('pve')">Vs Bot (PvE)</button>
+      <button class="btn warning" onclick="Game.startSetup('reverse-pve')">Reverse PvE</button>
+      <button class="btn success" onclick="Game.startSetup('local-pvp')">Local PvP</button>
+      <button class="btn danger" onclick="Game.startLobby()">Online PvP</button>
+    </div>
+  </div>
 
-        <div class="health-section" id="health-section">
-            <div class="health-box" id="p1-box"><span id="p1-label">P1</span> (<span id="p1-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p1-hp-bar"></div></div></div>
-            <div class="health-box" id="p2-box"><span id="p2-label">P2</span> (<span id="p2-hp-text"></span>)<div class="health-bar-bg"><div class="health-bar-fill" id="p2-hp-bar"></div></div></div>
-        </div>
+  <!-- PvE Setup -->
+  <div id="setup-mode" class="hidden">
+    <h2 style="text-align:center;margin-bottom:1rem;" id="setup-title">Setup Game</h2>
+    <div id="ai-difficulty-select">
+      <button class="btn" onclick="Game.startGame('pve', 'easy')">Easy AI</button>
+      <button class="btn" onclick="Game.startGame('pve', 'normal')">Normal AI</button>
+      <button class="btn" onclick="Game.startGame('pve', 'hard')">Hard AI</button>
+      <button class="btn danger" onclick="Game.startGame('pve', 'expert')">Expert AI</button>
+    </div>
+    <button class="btn" onclick="UI.showMainMenu()" style="margin-top:2rem; background:gray;">Back to Menu</button>
+  </div>
 
-        <div class="status-board" id="status-board">
-            <span>Min: <span id="min-display">1</span></span>
-            <span>Max: <span id="max-display">100</span></span>
-        </div>
+  <!-- Online Lobby -->
+  <div id="online-lobby" class="hidden">
+    <h2 style="text-align:center;">Online Multiplayer</h2>
 
-        <div class="battle-log" id="battle-log"></div>
-
-        <div class="controls" id="controls">
-            <div id="input-controls" style="display:flex; flex-direction:column;">
-                <div class="fake-input" id="user-input-display"></div>
-                <div class="numpad">
-                    <button onclick="numPress('1')">1</button><button onclick="numPress('2')">2</button><button onclick="numPress('3')">3</button>
-                    <button onclick="numPress('4')">4</button><button onclick="numPress('5')">5</button><button onclick="numPress('6')">6</button>
-                    <button onclick="numPress('7')">7</button><button onclick="numPress('8')">8</button><button onclick="numPress('9')">9</button>
-                    <button class="btn-gray" onclick="numDel()">⌫</button><button onclick="numPress('0')">0</button><button class="btn-red" id="submit-btn" onclick="handleUserGuess()">GUESS</button>
-                </div>
-            </div>
-
-            <div class="feedback-controls" id="feedback-controls">
-                <button class="btn-blue" onclick="manualFeedback('H')">Too High ⬇️</button>
-                <button class="btn-blue" onclick="manualFeedback('L')">Too Low ⬆️</button>
-                <button class="btn-correct" onclick="manualFeedback('C')">Correct! ✅</button>
-            </div>
-
-            <button class="btn-blue" id="menu-btn" style="display:none; margin-top:10px;" onclick="location.reload()">Back to Menu</button>
-        </div>
+    <div class="glass" style="padding:1.5rem; margin-top:1rem; text-align:center;">
+      <h3>Host a Game</h3>
+      <div class="code-display" id="host-code">----</div>
+      <button id="btn-host" class="btn">Generate Code</button>
     </div>
 
-    <script>
-        // --- GLOBAL VARIABLES ---
-let secretNumber, low, high, p1Hp, p2Hp, currentMode, aiLevel;
-let maxGuesses = 7; 
-let maxRange = 100; // Locked strictly to 1-100
-let activePlayer = 1; 
-let currentGuessString = "";
-let pendingManualGuess = 0; 
-let isMuted = false;
+    <div class="glass" style="padding:1.5rem; margin-top:1rem; text-align:center;">
+      <h3>Join a Game</h3>
+      <input type="text" id="input-join-code" placeholder="4-Letter Code"
+        style="text-transform:uppercase; letter-spacing:2px; font-weight:bold;">
+      <button id="btn-join" class="btn success">Join Game</button>
+    </div>
 
-// Networking Variables
-let peer = null; let conn = null; let isOnline = false; let myPlayerId = 1; 
+    <div id="connection-status" style="text-align:center; margin-top:1rem; color:var(--warning);"></div>
 
-// --- PROFILE SYSTEM ---
-let userProfile = JSON.parse(localStorage.getItem('numbattle_profile')) || { username: "Player", avatar: "🧑", localWins: 0, onlineWins: 0, isMuted: false };
-document.getElementById('username-input').value = userProfile.username; 
-document.getElementById('avatar-input').value = userProfile.avatar;
-document.getElementById('stat-local-win').innerText = userProfile.localWins; 
-document.getElementById('stat-online-win').innerText = userProfile.onlineWins;
+    <button class="btn" onclick="Network.disconnect(); UI.showMainMenu()" style="margin-top:1rem; background:gray;">Back
+      to Menu</button>
+  </div>
 
-isMuted = userProfile.isMuted;
-document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+  <!-- Game UI -->
+  <div id="game-ui" class="hidden glass">
+    <div class="top-bar">
+      <div class="player-info p1">
+        <div class="player-avatar" id="p1-avatar">🧑</div>
+        <div>
+          <div class="player-name" id="p1-name">Player 1</div>
+          <div class="hp-bar" id="p1-hp"></div>
+        </div>
+      </div>
+      <div style="font-weight:800; color:var(--warning);" id="turn-indicator">P1 TURN</div>
+      <div class="player-info p2" style="flex-direction:row-reverse; text-align:right;">
+        <div class="player-avatar" id="p2-avatar">🤖</div>
+        <div>
+          <div class="player-name" id="p2-name">Bot</div>
+          <div class="hp-bar" id="p2-hp"></div>
+        </div>
+      </div>
+    </div>
 
-function saveProfile() {
-    userProfile.username = document.getElementById('username-input').value.trim() || "Player";
-    userProfile.avatar = document.getElementById('avatar-input').value;
-    userProfile.isMuted = isMuted;
-    localStorage.setItem('numbattle_profile', JSON.stringify(userProfile));
-}
+    <div class="battle-log" id="battle-log">
+      <div class="log-entry system">Game Started! Target is between 1 and 100.</div>
+    </div>
 
-// --- AUDIO ENGINE ---
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function toggleMute() { isMuted = !isMuted; document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊'; saveProfile(); }
-function playSound(type) {
-    if (isMuted) return; if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    if (type === 'guess') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.05, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } 
-    else if (type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
-    else if (type === 'win') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
-}
+    <div class="controls-area">
+      <!-- Numpad State -->
+      <div id="input-numpad" class="">
+        <div class="current-guess-display" id="current-guess">_</div>
+        <div class="numpad">
+          <button class="num-btn" onclick="UI.appendGuess(1)">1</button>
+          <button class="num-btn" onclick="UI.appendGuess(2)">2</button>
+          <button class="num-btn" onclick="UI.appendGuess(3)">3</button>
+          <button class="num-btn" onclick="UI.appendGuess(4)">4</button>
+          <button class="num-btn" onclick="UI.appendGuess(5)">5</button>
+          <button class="num-btn" onclick="UI.appendGuess(6)">6</button>
+          <button class="num-btn" onclick="UI.appendGuess(7)">7</button>
+          <button class="num-btn" onclick="UI.appendGuess(8)">8</button>
+          <button class="num-btn" onclick="UI.appendGuess(9)">9</button>
+          <button class="num-btn" onclick="UI.clearGuess()">C</button>
+          <button class="num-btn" onclick="UI.appendGuess(0)">0</button>
+          <button class="num-btn enter" onclick="Game.submitGuess()">ENT</button>
+        </div>
+      </div>
 
-// --- DOM ELEMENTS ---
-const msgEl = document.getElementById('message'); const setupMenu = document.getElementById('setup-menu');
-const onlineLobby = document.getElementById('online-lobby'); const controlsEl = document.getElementById('controls');
-const healthSec = document.getElementById('health-section'); const statusBd = document.getElementById('status-board');
-const bLog = document.getElementById('battle-log'); const inputDisp = document.getElementById('user-input-display');
-const gameCard = document.getElementById('game-card'); const diffSelect = document.getElementById('ai-algorithm');
+      <!-- Judgment State -->
+      <div id="input-judgment" class="hidden">
+        <div style="text-align:center; font-size:1.2rem; margin-bottom:1rem;" id="judgment-prompt">Opponent Guessed: <b
+            id="judgment-guess-val" style="font-size:2rem; color:var(--warning);">50</b></div>
+        <div class="judgment-controls">
+          <button class="judg-btn high" onclick="Game.submitFeedback('high')">Too High ⬇️</button>
+          <button class="judg-btn low" onclick="Game.submitFeedback('low')">Too Low ⬆️</button>
+          <button class="judg-btn correct" onclick="Game.submitFeedback('correct')">Correct ✅</button>
+        </div>
+      </div>
 
-// --- VIRTUAL NUMPAD & DESKTOP KEYBOARD ---
-function numPress(val) { 
-    if(currentGuessString.length < 3) { currentGuessString += val; inputDisp.innerText = currentGuessString; playSound('guess'); } 
-}
-function numDel() { currentGuessString = currentGuessString.slice(0, -1); inputDisp.innerText = currentGuessString; }
-function clearNumpad() { currentGuessString = ""; inputDisp.innerText = ""; }
+      <!-- Waiting State -->
+      <div id="input-waiting" class="hidden"
+        style="display:flex; justify-content:center; align-items:center; height:100%; font-size:1.5rem; color:#94a3b8;">
+        Waiting for opponent...
+      </div>
+    </div>
 
-document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
-    let isMyTurn = isOnline ? (activePlayer === myPlayerId) : (activePlayer === 1 || currentMode === 'pvp_manual');
-    let inputVisible = document.getElementById('input-controls').style.display === 'flex';
-    let feedbackVisible = document.getElementById('feedback-controls').style.display === 'grid';
+    <div style="text-align:center; margin-top:10px;">
+      <button class="btn" style="background:gray; width:auto; padding:5px 15px; font-size:0.9rem;"
+        onclick="Game.quit()">Quit</button>
+    </div>
+  </div>
 
-    if (inputVisible && isMyTurn) {
-        if (e.key >= '0' && e.key <= '9') numPress(e.key);
-        else if (e.key === 'Backspace') numDel();
-        else if (e.key === 'Enter') document.getElementById('submit-btn').click();
-    } 
-    else if (feedbackVisible && isMyTurn) {
-        if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'h') manualFeedback('H');
-        else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'l') manualFeedback('L');
-        else if (e.key === 'Enter' || e.key.toLowerCase() === 'c') manualFeedback('C');
-    }
-});
 
-// --- UI HELPERS ---
-function triggerDamage() { playSound('error'); gameCard.classList.remove('shake'); void gameCard.offsetWidth; gameCard.classList.add('shake'); document.body.classList.add('damage-flash'); setTimeout(() => document.body.classList.remove('damage-flash'), 150); }
-function appendLog(txt, cls) { const el = document.createElement('div'); el.className = `log-entry ${cls}`; el.innerHTML = `> ${txt}`; bLog.appendChild(el); bLog.scrollTop = bLog.scrollHeight; }
-function showOnlineLobby() { setupMenu.style.display = 'none'; onlineLobby.style.display = 'flex'; msgEl.innerHTML = "Host or Join!"; }
-function cancelOnline() { if(peer) peer.destroy(); onlineLobby.style.display = 'none'; setupMenu.style.display = 'flex'; document.getElementById('room-code-display').style.display = 'none'; }
+  <script>
+    // --- AUDIO MANAGER ---
+    const AudioMgr = {
+      ctx: null,
+      muted: false,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      },
+      playTone(freq, type, duration, vol = 0.1) {
+        if (this.muted || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      },
+      beep() { this.playTone(600, 'sine', 0.1, 0.1); },
+      buzz() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
+      chime() {
+        if (this.muted || !this.ctx) return;
+        this.playTone(523.25, 'sine', 0.2, 0.1); // C5
+        setTimeout(() => this.playTone(659.25, 'sine', 0.2, 0.1), 100); // E5
+        setTimeout(() => this.playTone(783.99, 'sine', 0.4, 0.1), 200); // G5
+      },
+      toggleMute() {
+        this.muted = !this.muted;
+        Storage.saveMute(this.muted);
+        document.getElementById('btn-mute').textContent = this.muted ? '🔇' : '🔊';
+      }
+    };
 
-// --- NETWORKING (RACE CONDITION PATCHED) ---
-function generateRoomCode() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
-const peerConfig = { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
+    // --- STORAGE MANAGER ---
+    const Storage = {
+      profile: { username: '', avatar: '🧑', localWins: 0, onlineWins: 0 },
+      load() {
+        const data = localStorage.getItem('unb_profile');
+        if (data) this.profile = { ...this.profile, ...JSON.parse(data) };
+        AudioMgr.muted = localStorage.getItem('unb_mute') === 'true';
+        document.getElementById('btn-mute').textContent = AudioMgr.muted ? '🔇' : '🔊';
+      },
+      save() { localStorage.setItem('unb_profile', JSON.stringify(this.profile)); },
+      saveMute(muted) { localStorage.setItem('unb_mute', muted); }
+    };
 
-function hostOnlineGame() {
-    try {
-        saveProfile(); 
-        aiLevel = diffSelect ? diffSelect.value : 'normal'; 
-        currentMode = document.getElementById('game-mode').value;
-        
-        const rc = generateRoomCode(); 
-        document.getElementById('my-code').innerText = rc; 
-        document.getElementById('room-code-display').style.display = 'block';
-        
-        peer = new Peer('numbattle-' + rc, peerConfig);
-        
-        peer.on('error', (err) => { 
-            alert("Host Error: " + err.type + "\n" + err.message); 
-            cancelOnline();
+    // --- NETWORK MANAGER (PEERJS) ---
+    const Network = {
+      peer: null,
+      conn: null,
+      isHost: false,
+      generateCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        return Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      },
+      initHost() {
+        return new Promise((resolve) => {
+          const code = this.generateCode();
+          this.peer = new Peer('unb-' + code, { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
+          this.isHost = true;
+          this.peer.on('open', (id) => resolve(code));
+          this.peer.on('connection', (c) => {
+            if (this.conn) { c.close(); return; } // Only one connection
+            this.conn = c;
+            this.setupConnection();
+          });
+        });
+      },
+      joinGame(code) {
+        return new Promise((resolve, reject) => {
+          this.peer = new Peer({ config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] } });
+          this.isHost = false;
+          this.peer.on('open', () => {
+            this.conn = this.peer.connect('unb-' + code.toUpperCase(), { reliable: true });
+            this.conn.on('open', () => {
+              this.setupConnection();
+              resolve();
+            });
+            this.conn.on('error', reject);
+          });
+          this.peer.on('error', reject);
+        });
+      },
+      setupConnection() {
+        document.getElementById('connection-status').textContent = "Connected! Syncing...";
+        this.conn.on('data', (data) => this.handleData(data));
+        this.conn.on('close', () => {
+          UI.logSystem("Opponent disconnected.");
+          setTimeout(() => { if (Game.state !== 'menu') Game.quit(); }, 3000);
         });
 
-        peer.on('connection', (c) => {
-            conn = c; 
-            setupNet(); 
-            isOnline = true; 
-            myPlayerId = 1; 
-            secretNumber = Math.floor(Math.random() * maxRange) + 1; 
-            
-            // PATCH: Check if connection is already open before waiting for it!
-            const startHostGame = () => {
-                conn.send({ type: 'START', secret: secretNumber, mode: currentMode, name: userProfile.username, av: userProfile.avatar }); 
-                initGame("Connected!");
-            };
-
-            if (conn.open) { startHostGame(); } 
-            else { conn.on('open', startHostGame); }
-        });
-    } catch(e) {
-        alert("System Error: Could not initialize hosting.");
-        console.error(e);
-    }
-}
-
-function joinOnlineGame() {
-    saveProfile(); let code = document.getElementById('join-code').value.toUpperCase(); if(code.length !== 4) return alert("Invalid Code");
-    msgEl.innerHTML = "Connecting..."; 
-    peer = new Peer(null, peerConfig); 
-    
-    // Detailed error logging to figure out why a join fails
-    peer.on('error', (err) => { 
-        if(err.type === 'peer-unavailable') alert(`Room ${code} not found! Check the code or ensure the Host is waiting.`);
-        else alert(`Connection Error: ${err.type}`);
-        cancelOnline();
-    });
-
-    peer.on('open', () => { 
-        conn = peer.connect('numbattle-' + code); 
-        
-        // Setup a temporary error listener just for the connection phase
-        conn.on('error', (err) => { alert("Failed to connect to host: " + err); cancelOnline(); });
-        setupNet(); 
-    });
-}
-
-function setupNet() {
-    conn.on('data', (d) => {
-        if (d.type === 'START') { 
-            isOnline = true; myPlayerId = 2; secretNumber = d.secret; currentMode = d.mode; 
-            initGame("Connected!"); document.getElementById('p1-label').innerText = `${d.av} ${d.name}`; 
-            conn.send({ type: 'SYNC', name: userProfile.username, av: userProfile.avatar }); 
-        } 
-        else if (d.type === 'GUESS') processGuess(d.p, d.val);
-        else if (d.type === 'SYNC') { document.getElementById('p2-label').innerText = `${d.av} ${d.name}`; }
-        else if (d.type === 'MANUAL_GUESS') {
-            pendingManualGuess = d.val; activePlayer = 1; 
-            document.getElementById('input-controls').style.display = 'none';
-            document.getElementById('feedback-controls').style.display = 'grid';
-            document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
-            msgEl.innerHTML = `Opponent guessed <span class="highlight">${d.val}</span>.<br><b>You:</b> Is this Too High, Too Low, or Correct?`;
+        // Sync profile
+        this.send({ type: 'SYNC_PROFILE', p: Storage.profile });
+      },
+      send(data) {
+        if (this.conn && this.conn.open) {
+          this.conn.send(data);
         }
-        else if (d.type === 'MANUAL_FEEDBACK') applyManualFeedback(d.fb, d.val);
-    });
-
-    // Graceful Reconnect Timer
-    conn.on('close', () => { 
-        document.getElementById('input-controls').style.display = 'none';
-        let countdown = 10;
-        let reconTimer = setInterval(() => {
-            countdown--;
-            if(conn.open) {
-                clearInterval(reconTimer);
-                msgEl.innerHTML = "Reconnected! Resuming game.";
-                updateUI(); 
-            } else if (countdown <= 0) {
-                clearInterval(reconTimer);
-                alert("Opponent permanently disconnected!");
-                location.reload();
-            } else {
-                msgEl.innerHTML = `⚠️ Connection lost! Waiting ${countdown}s for opponent...`;
+      },
+      handleData(data) {
+        switch (data.type) {
+          case 'SYNC_PROFILE':
+            Game.p2Profile = data.p;
+            if (this.isHost) {
+              setTimeout(() => {
+                Game.startGame('online-pvp');
+              }, 1000);
             }
-        }, 1000);
-    });
-}
-
-// --- GAME LOGIC INITIALIZATION ---
-function startGame() {
-    saveProfile(); aiLevel = diffSelect ? diffSelect.value : 'normal';
-    currentMode = document.getElementById('game-mode').value; isOnline = false; myPlayerId = 1;
-    secretNumber = Math.floor(Math.random() * maxRange) + 1; 
-    let startMsg = "Game Started!";
-    if (currentMode === 'reverse') startMsg = `Think of a number (1-${maxRange}). I will guess it!`;
-    if (currentMode === 'pvp_manual') startMsg = `<b>Player 1:</b> Think of a number (1-${maxRange}).<br><b>Player 2:</b> You guess first!`;
-    initGame(startMsg);
-}
-
-function initGame(msg) {
-    setupMenu.style.display = 'none'; onlineLobby.style.display = 'none'; controlsEl.style.display = 'flex'; statusBd.style.display = 'flex'; healthSec.style.display = 'flex'; bLog.style.display = 'block';
-    low = 1; high = maxRange; p1Hp = maxGuesses; p2Hp = maxGuesses; activePlayer = 1; clearNumpad();
-    
-    document.getElementById('p1-label').innerText = `${userProfile.avatar} ` + (isOnline && myPlayerId !== 1 ? "Opponent" : userProfile.username);
-    if (currentMode === 'pvp_manual') document.getElementById('p2-label').innerText = "🧑 P2 (Guesser)";
-    else document.getElementById('p2-label').innerText = (isOnline && myPlayerId === 2 ? `${userProfile.avatar} YOU` : "🤖 Robot");
-    
-    updateUI(); msgEl.innerHTML = msg;
-
-    if (currentMode === 'reverse') {
-        document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'grid';
-        activePlayer = 2; updateUI(); setTimeout(robotTurnReverse, 1500);
-    } 
-    else if (currentMode === 'pvp_manual') {
-        activePlayer = 2; updateUI();
-        if (isOnline) {
-            if (myPlayerId === 1) { 
-                document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'none';
-                msgEl.innerHTML = `<b>Game Master:</b> Think of a number (1-${maxRange}). Waiting for opponent...`;
-            } else { 
-                document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none';
-                msgEl.innerHTML = `<b>Player 2:</b> You are guessing! Enter a number.`;
-            }
-        } else { 
-            document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none';
-            msgEl.innerHTML = `<b>P1:</b> Think of a number.<br><b>P2:</b> Type your first guess!`;
+            break;
+          case 'START_GAME':
+            Game.onlineStart(data.turn);
+            break;
+          case 'GUESS':
+            Game.handleGuess(data.guess, false);
+            break;
+          case 'JUDGMENT':
+            Game.applyJudgment(data.fb, false);
+            break;
         }
-    }
-    else { document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none'; }
-}
+      },
+      disconnect() {
+        if (this.conn) this.conn.close();
+        if (this.peer) this.peer.destroy();
+        this.conn = null;
+        this.peer = null;
+      }
+    };
 
-function updateUI() {
-    document.getElementById('min-display').innerText = low; document.getElementById('max-display').innerText = high;
-    document.getElementById('p1-hp-text').innerText = p1Hp; document.getElementById('p2-hp-text').innerText = p2Hp;
-    document.getElementById('p1-hp-bar').style.width = `${(p1Hp/maxGuesses)*100}%`; document.getElementById('p2-hp-bar').style.width = `${(p2Hp/maxGuesses)*100}%`;
-    document.getElementById('p1-box').classList.remove('active-turn'); document.getElementById('p2-box').classList.remove('active-turn');
-    if (activePlayer === 1) document.getElementById('p1-box').classList.add('active-turn'); else document.getElementById('p2-box').classList.add('active-turn');
-}
+    // --- AI ENGINE ---
+    const AI = {
+      makeGuess(min, max, diff) {
+        if (min > max) return min; // fallback
+        switch (diff) {
+          case 'easy':
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+          case 'normal':
+            return Math.floor((min + max) / 2);
+          case 'hard':
+            return Math.floor(min + (max - min) * 0.618);
+          case 'expert':
+            const factor = 0.3 + (Math.random() * 0.4); // 30% to 70%
+            return Math.floor(min + (max - min) * factor);
+          default:
+            return Math.floor((min + max) / 2);
+        }
+      }
+    };
 
-// --- GUESSING LOGIC ---
-function handleUserGuess() {
-    let g = parseInt(currentGuessString); if (isNaN(g) || g < low || g > high) return alert(`Guess between ${low} and ${high}!`);
-    clearNumpad(); playSound('guess');
+    // --- GAME CONTROLLER ---
+    const Game = {
+      state: 'menu',
+      mode: '',
+      difficulty: 'normal',
+      turn: 1,
+      phase: 'guess',
+      p1Min: 1, p1Max: 100,
+      p2Min: 1, p2Max: 100,
+      p1HP: 7,
+      p2HP: 7,
+      p2Profile: { username: 'Bot', avatar: '🤖' },
+      lastGuess: 0,
+      botTarget: 0,
 
-    if (currentMode === 'pvp_manual') {
-        pendingManualGuess = g;
-        if (isOnline) {
-            conn.send({ type: 'MANUAL_GUESS', val: g });
-            document.getElementById('input-controls').style.display = 'none';
-            msgEl.innerHTML = `You guessed <span class="highlight">${g}</span>. Waiting for Host to judge...`;
-            return;
+      startSetup(mode) {
+        this.mode = mode;
+        if (mode === 'pve' || mode === 'reverse-pve') {
+          document.getElementById('setup-title').textContent = "Select Bot Difficulty";
+          document.getElementById('ai-difficulty-select').classList.remove('hidden');
+          UI.showScreen('setup-mode');
+        } else if (mode === 'local-pvp') {
+          this.p2Profile = { username: 'Player 2', avatar: '👽' };
+          this.startGame('local-pvp');
+        }
+      },
+
+      startLobby() {
+        UI.showScreen('online-lobby');
+        document.getElementById('connection-status').textContent = "";
+        document.getElementById('host-code').textContent = "----";
+        document.getElementById('input-join-code').value = "";
+      },
+
+      startGame(mode, diff = 'normal') {
+        this.mode = mode;
+        this.difficulty = diff;
+        this.state = 'playing';
+        this.turn = 1;
+        this.phase = 'guess';
+        this.p1Min = 1; this.p1Max = 100;
+        this.p2Min = 1; this.p2Max = 100;
+        this.p1HP = 7;
+        this.p2HP = 7;
+        this.currentGuessStr = '';
+        this.lastGuess = 0;
+
+        if (mode === 'pve') {
+          this.p2Profile = { username: `Bot (${diff})`, avatar: '🤖' };
+          this.botTarget = Math.floor(Math.random() * 100) + 1;
+        } else if (mode === 'reverse-pve') {
+          this.p2Profile = { username: `Bot (${diff})`, avatar: '🤖' };
+          this.turn = 2; // Bot goes first
+        } else if (mode === 'online-pvp') {
+          Network.send({ type: 'START_GAME', turn: 2 }); // Tell client it's P2
+        }
+
+        UI.initGameUI();
+        this.processTurn();
+      },
+
+      onlineStart(roleTurn) {
+        this.mode = 'online-pvp';
+        this.state = 'playing';
+        this.turn = 1; // 1 is always current player local
+        this.phase = 'guess';
+        this.p1Min = 1; this.p1Max = 100;
+        this.p2Min = 1; this.p2Max = 100;
+        this.p1HP = 7;
+        this.p2HP = 7;
+        this.currentGuessStr = '';
+        UI.initGameUI();
+        this.processTurn(roleTurn);
+      },
+
+      processTurn(forceTurn = null) {
+        if (forceTurn) this.turn = forceTurn;
+
+        UI.updateTurnIndicator();
+
+        if (this.phase === 'judge') {
+           if (this.mode === 'pve') {
+             if (this.turn === 1) {
+                // P1 guessed, Bot auto-judges
+                let fb = 'correct';
+                if (this.lastGuess < this.botTarget) fb = 'low';
+                else if (this.lastGuess > this.botTarget) fb = 'high';
+                setTimeout(() => this.applyJudgment(fb, false), 500);
+             } else {
+                UI.setControlsState('judgment', this.lastGuess);
+             }
+           } else if (this.mode === 'reverse-pve') {
+             UI.setControlsState('judgment', this.lastGuess);
+           } else if (this.mode === 'local-pvp') {
+             UI.setControlsState('judgment', this.lastGuess);
+           } else if (this.mode === 'online-pvp') {
+             if (this.turn === 1) UI.setControlsState('waiting');
+             else UI.setControlsState('judgment', this.lastGuess);
+           }
+           return;
+        }
+
+        // phase == 'guess'
+        if (this.mode === 'pve') {
+          if (this.turn === 1) {
+            UI.setControlsState('numpad');
+            UI.clearGuess();
+          } else {
+            UI.setControlsState('waiting');
+            setTimeout(() => {
+              this.lastGuess = AI.makeGuess(this.p2Min, this.p2Max, this.difficulty);
+              this.handleGuess(this.lastGuess, false);
+            }, 1000);
+          }
+        } else if (this.mode === 'reverse-pve') {
+          if (this.turn === 2) {
+            UI.setControlsState('waiting');
+            setTimeout(() => {
+              this.lastGuess = AI.makeGuess(this.p2Min, this.p2Max, this.difficulty);
+              this.handleGuess(this.lastGuess, false);
+            }, 1000);
+          }
+        } else if (this.mode === 'local-pvp') {
+          UI.setControlsState('numpad');
+          UI.clearGuess();
+        } else if (this.mode === 'online-pvp') {
+          if (this.turn === 1) { // Local player turn
+            UI.setControlsState('numpad');
+            UI.clearGuess();
+          } else {
+            UI.setControlsState('waiting');
+          }
+        }
+      },
+
+      submitGuess() {
+        if (this.currentGuessStr === '') return;
+        let g = parseInt(this.currentGuessStr);
+        if (g < 1 || g > 100) { UI.shake(); return; }
+
+        if (this.mode === 'online-pvp') {
+          Network.send({ type: 'GUESS', guess: g });
+        }
+
+        this.handleGuess(g, true);
+      },
+
+      handleGuess(g, isLocal) {
+        AudioMgr.beep();
+        this.lastGuess = g;
+        let playerClass = isLocal ? 'p1' : 'p2';
+        let playerName = isLocal ? Storage.profile.username : this.p2Profile.username;
+
+        if (this.mode === 'local-pvp') {
+          playerClass = this.turn === 1 ? 'p1' : 'p2';
+          playerName = this.turn === 1 ? Storage.profile.username : this.p2Profile.username;
+        }
+
+        UI.logEntry(`${playerName} guesses ${g}`, playerClass);
+        UI.clearGuess();
+
+        this.phase = 'judge';
+
+        let judgerName = Storage.profile.username;
+        if (this.mode === 'local-pvp' && this.turn === 1) judgerName = this.p2Profile.username;
+        else if (this.mode === 'pve' && this.turn === 1) judgerName = this.p2Profile.username;
+
+        document.getElementById('judgment-prompt').innerHTML = `<b>${judgerName}</b>, is this correct?<br><span style="font-size:2rem; color:var(--warning);">${g}</span>`;
+
+        this.processTurn();
+      },
+
+      submitFeedback(fb) {
+        AudioMgr.beep();
+        if (this.mode === 'online-pvp') {
+          Network.send({ type: 'JUDGMENT', fb: fb });
+        }
+        this.applyJudgment(fb, true);
+      },
+
+      applyJudgment(fb, isLocal) {
+        let currentGuesser = this.turn;
+        let minB = currentGuesser === 1 ? this.p1Min : this.p2Min;
+        let maxB = currentGuesser === 1 ? this.p1Max : this.p2Max;
+
+        if (fb === 'low') {
+          if (this.lastGuess >= maxB) {
+             UI.logEntry("Contradiction! You can't go higher than max bound.", 'system');
+             UI.shake();
+             this.takeDamage(currentGuesser === 1 ? 2 : 1);
+             if (this.state !== 'over') UI.setControlsState('judgment', this.lastGuess);
+             return;
+          }
+          if (currentGuesser === 1) this.p1Min = Math.max(this.p1Min, this.lastGuess + 1);
+          else this.p2Min = Math.max(this.p2Min, this.lastGuess + 1);
+          UI.logEntry(`Target is higher than ${this.lastGuess}`, 'system');
+          this.takeDamage(currentGuesser);
+        } else if (fb === 'high') {
+          if (this.lastGuess <= minB) {
+             UI.logEntry("Contradiction! You can't go lower than min bound.", 'system');
+             UI.shake();
+             this.takeDamage(currentGuesser === 1 ? 2 : 1);
+             if (this.state !== 'over') UI.setControlsState('judgment', this.lastGuess);
+             return;
+          }
+          if (currentGuesser === 1) this.p1Max = Math.min(this.p1Max, this.lastGuess - 1);
+          else this.p2Max = Math.min(this.p2Max, this.lastGuess - 1);
+          UI.logEntry(`Target is lower than ${this.lastGuess}`, 'system');
+          this.takeDamage(currentGuesser);
+        } else if (fb === 'correct') {
+          UI.logEntry(`Correct! Guessed the target!`, 'system');
+          this.endGame(currentGuesser);
+          return;
+        }
+
+        if (this.state === 'over') return;
+
+        this.phase = 'guess';
+        this.turn = this.turn === 1 ? 2 : 1;
+        if (this.mode === 'reverse-pve') this.turn = 2;
+
+        this.processTurn();
+      },
+
+      takeDamage(playerNum) {
+        AudioMgr.buzz();
+        UI.shake();
+        if (playerNum === 1) {
+          this.p1HP--;
+          UI.renderHP();
+          if (this.p1HP <= 0) this.endGame(2);
         } else {
-            document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'grid';
-            document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
-            activePlayer = 1; updateUI(); msgEl.innerHTML = `P2 guessed <span class="highlight">${g}</span>.<br><b>Player 1:</b> Is this Too High, Too Low, or Correct?`;
-            return;
+          this.p2HP--;
+          UI.renderHP();
+          if (this.p2HP <= 0) this.endGame(1);
         }
-    }
-    if (isOnline) conn.send({ type: 'GUESS', p: myPlayerId, val: g }); 
-    processGuess(activePlayer, g);
-}
+      },
 
-function processGuess(p, g) {
-    let n = p === 1 ? "P1" : "P2";
-    if (g === secretNumber) { triggerWin(p); return; }
-    if (p === 1) p1Hp--; else p2Hp--; updateUI(); triggerDamage();
-    if (p1Hp <= 0 && p2Hp <= 0) { triggerDraw(); return; }
-    if (g > secretNumber) { high = g - 1; msgEl.innerHTML = `${n} guessed ${g}. <b>TOO HIGH!</b>`; appendLog(`${n}: ${g} (HIGH)`, 'log-p1'); } 
-    else { low = g + 1; msgEl.innerHTML = `${n} guessed ${g}. <b>TOO LOW!</b>`; appendLog(`${n}: ${g} (LOW)`, 'log-p1'); }
-    activePlayer = activePlayer === 1 ? 2 : 1;
-    if (activePlayer === 1 && p1Hp <= 0) activePlayer = 2; if (activePlayer === 2 && p2Hp <= 0) activePlayer = 1;
-    updateUI(); if (currentMode === 'pve' && activePlayer === 2) setTimeout(robotTurn, 1000); 
-}
+      endGame(winnerNum) {
+        this.state = 'over';
+        UI.setControlsState('waiting');
+        let winName = winnerNum === 1 ? Storage.profile.username : this.p2Profile.username;
 
-// --- TRUE PVP & REVERSE MANUAL JUDGING ---
-function manualFeedback(t) {
-    document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = true);
-    if (currentMode === 'pvp_manual') {
-        if (isOnline) { conn.send({ type: 'MANUAL_FEEDBACK', fb: t, val: pendingManualGuess }); document.getElementById('feedback-controls').style.display = 'none'; msgEl.innerHTML = "Feedback sent! Waiting for opponent..."; }
-        applyManualFeedback(t, pendingManualGuess);
-    } 
-    else if (currentMode === 'reverse') {
-        if (t === 'C') { triggerWin(2); return; } p1Hp--; updateUI(); triggerDamage();
-        if (p1Hp <= 0) { triggerWin(2); return; } // Robot wins if player out of hints
-        if (t === 'H') { high = robotGuess - 1; appendLog(`Robot: ${robotGuess} (HIGH)`, 'log-p2'); } 
-        else if (t === 'L') { low = robotGuess + 1; appendLog(`Robot: ${robotGuess} (LOW)`, 'log-p2'); }
-        updateUI(); setTimeout(robotTurnReverse, 1000);
-    }
-}
+        if (winnerNum === 1) {
+          AudioMgr.chime();
+          UI.showConfetti();
+          if (this.mode === 'online-pvp') Storage.profile.onlineWins++;
+          else Storage.profile.localWins++;
+          Storage.save();
+        } else {
+          AudioMgr.buzz();
+        }
 
-function applyManualFeedback(t, guessVal) {
-    if (t === 'C') { triggerWin(2); return; } 
-    p2Hp--; updateUI(); triggerDamage();
-    if (p2Hp <= 0) { triggerWin(1); return; } 
-    if (t === 'H') { high = guessVal - 1; appendLog(`P2: ${guessVal} (HIGH)`, 'log-p2'); } 
-    else if (t === 'L') { low = guessVal + 1; appendLog(`P2: ${guessVal} (LOW)`, 'log-p2'); }
-    activePlayer = 2; updateUI();
-    if (!isOnline || (isOnline && myPlayerId === 2)) { document.getElementById('input-controls').style.display = 'flex'; document.getElementById('feedback-controls').style.display = 'none'; msgEl.innerHTML = `<b>Player 2:</b> Enter your next guess!`; }
-}
+        UI.logEntry(`Game Over! ${winName} wins!`, 'system');
+        UI.logEntry(`The target was ${this.targetNumber || this.lastGuess}`, 'system');
 
-// --- ADVANCED AI ENGINE ---
-function getAIGuess() {
-    if (aiLevel === 'easy') return Math.floor(Math.random() * (high - low + 1)) + low;
-    if (aiLevel === 'normal') return Math.floor((low + high) / 2);
-    if (aiLevel === 'hard') return Math.floor(low + (high - low) * 0.618);
-    if (aiLevel === 'expert') {
-        let dyn = 0.3 + (Math.random() * 0.4); let g = Math.floor(low + (high - low) * dyn);
-        if (g <= low && low !== high) return low + 1; if (g >= high && low !== high) return high - 1; return g;
-    }
-    return Math.floor((low + high) / 2);
-}
+        setTimeout(() => {
+          this.quit();
+        }, 5000);
+      },
 
-function robotTurn() {
-    if (p2Hp <= 0) { activePlayer = 1; updateUI(); return; }
-    document.getElementById('emoji-display').innerText = '🧠'; 
-    setTimeout(() => { let g = getAIGuess(); if (g < low) g = low; if (g > high) g = high; processGuess(2, g); }, 1000); 
-}
+      quit() {
+        this.state = 'menu';
+        if (this.mode === 'online-pvp') Network.disconnect();
+        UI.showMainMenu();
+      }
+    };
 
-function robotTurnReverse() {
-    if(low > high) { msgEl.innerHTML = "Hints crossed! You broke me!"; triggerDamage(); return; }
-    robotGuess = getAIGuess(); if (robotGuess < low) robotGuess = low; if (robotGuess > high) robotGuess = high;
-    document.getElementById('emoji-display').innerText = '🤔';
-    msgEl.innerHTML = `Is your number <span class="highlight">${robotGuess}</span>?`;
-    document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
-}
+    // --- UI MANAGER ---
+    const UI = {
+      screens: ['profile-modal', 'main-menu', 'setup-mode', 'online-lobby', 'game-ui'],
 
-// --- GAME OVER ---
-function triggerWin(id) { 
-    playSound('win'); let w = id === 1 ? "Player 1" : "Player 2";
-    if (currentMode === 'reverse' || currentMode === 'pve') w = id === 1 ? "Player 1" : "Robot";
-    if (isOnline && id === myPlayerId) w = "YOU";
-    msgEl.innerHTML = `<b>${w} WINS!</b>`; document.getElementById('emoji-display').innerText = '🎉';
-    if (id === 1 && currentMode !== 'pvp_manual') userProfile.localWins++; if (isOnline && id === myPlayerId) userProfile.onlineWins++; 
-    saveProfile(); startConfetti(); endGame(); 
-}
-function triggerDraw() { playSound('error'); document.getElementById('emoji-display').innerText = '☠️'; msgEl.innerHTML = `Health depleted. Game Over.`; endGame(); }
-function endGame() { document.getElementById('input-controls').style.display = 'none'; document.getElementById('feedback-controls').style.display = 'none'; document.getElementById('menu-btn').style.display = 'block'; }
+      init() {
+        Storage.load();
 
-// --- CONFETTI ANIMATION ---
-const canvas = document.getElementById("confetti"); const ctx = canvas.getContext("2d"); let particles = []; let confettiActive = false;
-function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener("resize", resizeCanvas); resizeCanvas();
-function startConfetti() { confettiActive = true; particles = []; for(let i=0; i<100; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, r: Math.random()*6+4, dx: Math.random()*4-2, dy: Math.random()*5+2, color: `hsl(${Math.random()*360}, 100%, 50%)`, tilt: Math.random()*10-10 }); requestAnimationFrame(drawConfetti); setTimeout(() => confettiActive=false, 4000); }
-function drawConfetti() { ctx.clearRect(0,0,canvas.width,canvas.height); let active=0; particles.forEach((p) => { p.y+=p.dy; p.x+=p.dx; p.tilt+=0.1; if(p.y<canvas.height) active++; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r, p.y); ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r); ctx.stroke(); }); if(active>0 || confettiActive) requestAnimationFrame(drawConfetti); else ctx.clearRect(0,0,canvas.width,canvas.height); }
-    </script>
-    </body>
+        if (!Storage.profile.username) {
+          this.showScreen('profile-modal');
+        } else {
+          this.showMainMenu();
+        }
+
+        // Avatar select logic
+        document.querySelectorAll('.avatar-option').forEach(el => {
+          el.addEventListener('click', (e) => {
+            document.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
+            e.target.classList.add('selected');
+            Storage.profile.avatar = e.target.dataset.avatar;
+          });
+        });
+
+        // Save profile
+        document.getElementById('btn-save-profile').addEventListener('click', () => {
+          const name = document.getElementById('input-username').value.trim();
+          if (name) {
+            Storage.profile.username = name;
+            Storage.save();
+            AudioMgr.init(); // Init audio on first user interaction
+            this.showMainMenu();
+          }
+        });
+
+        // Mute button
+        document.getElementById('btn-mute').addEventListener('click', () => {
+          AudioMgr.init();
+          AudioMgr.toggleMute();
+        });
+
+        // Network UI
+        document.getElementById('btn-host').addEventListener('click', async () => {
+          document.getElementById('btn-host').disabled = true;
+          document.getElementById('host-code').textContent = "WAIT...";
+          const code = await Network.initHost();
+          document.getElementById('host-code').textContent = code;
+          document.getElementById('connection-status').textContent = "Waiting for opponent...";
+        });
+
+        document.getElementById('btn-join').addEventListener('click', async () => {
+          const code = document.getElementById('input-join-code').value.trim();
+          if (code.length === 4) {
+            document.getElementById('btn-join').disabled = true;
+            document.getElementById('connection-status').textContent = "Connecting...";
+            try {
+              await Network.joinGame(code);
+            } catch (e) {
+              document.getElementById('connection-status').textContent = "Connection Failed.";
+              document.getElementById('btn-join').disabled = false;
+            }
+          }
+        });
+
+        // Keyboard listeners
+        window.addEventListener('keydown', (e) => {
+          if (Game.state !== 'playing' || document.getElementById('input-numpad').classList.contains('hidden')) {
+            // URL cipher easter egg
+            this.handleEasterEgg(e.key);
+            return;
+          }
+          if (e.key >= '0' && e.key <= '9') {
+            this.appendGuess(e.key);
+          } else if (e.key === 'Backspace') {
+            Game.currentGuessStr = Game.currentGuessStr.slice(0, -1);
+            this.updateGuessDisplay();
+          } else if (e.key === 'Enter') {
+            Game.submitGuess();
+          }
+        });
+      },
+
+      showScreen(id) {
+        this.screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+      },
+
+      showMainMenu() {
+        document.getElementById('menu-stats').textContent = `Wins: ${Storage.profile.localWins} Local | ${Storage.profile.onlineWins} Online`;
+        this.showScreen('main-menu');
+      },
+
+      initGameUI() {
+        this.showScreen('game-ui');
+        document.getElementById('p1-name').textContent = Storage.profile.username;
+        document.getElementById('p1-avatar').textContent = Storage.profile.avatar;
+        document.getElementById('p2-name').textContent = Game.p2Profile.username;
+        document.getElementById('p2-avatar').textContent = Game.p2Profile.avatar;
+        document.getElementById('battle-log').innerHTML = '<div class="log-entry system">Game Started! Target is 1-100.</div>';
+        this.renderHP();
+        this.clearGuess();
+      },
+
+      renderHP() {
+        let p1HTML = '';
+        for (let i = 0; i < 7; i++) p1HTML += `<div class="hp-dot ${i < Game.p1HP ? 'active p1' : ''}"></div>`;
+        document.getElementById('p1-hp').innerHTML = p1HTML;
+
+        let p2HTML = '';
+        for (let i = 0; i < 7; i++) p2HTML += `<div class="hp-dot ${i < Game.p2HP ? 'active' : ''}"></div>`;
+        document.getElementById('p2-hp').innerHTML = p2HTML;
+      },
+
+      updateTurnIndicator() {
+        const ind = document.getElementById('turn-indicator');
+        if (Game.mode === 'local-pvp') {
+          ind.textContent = Game.turn === 1 ? 'P1 TURN' : 'P2 TURN';
+          ind.style.color = Game.turn === 1 ? 'var(--accent)' : 'var(--danger)';
+        } else {
+          ind.textContent = Game.turn === 1 ? 'YOUR TURN' : 'OPPONENT TURN';
+          ind.style.color = Game.turn === 1 ? 'var(--accent)' : 'var(--danger)';
+        }
+      },
+
+      appendGuess(num) {
+        if (Game.currentGuessStr.length < 3) {
+          Game.currentGuessStr += num;
+          this.updateGuessDisplay();
+        }
+      },
+      clearGuess() {
+        Game.currentGuessStr = '';
+        this.updateGuessDisplay();
+      },
+      updateGuessDisplay() {
+        document.getElementById('current-guess').textContent = Game.currentGuessStr || '_';
+      },
+
+      setControlsState(state, val = null) {
+        document.getElementById('input-numpad').classList.add('hidden');
+        document.getElementById('input-judgment').classList.add('hidden');
+        document.getElementById('input-waiting').classList.add('hidden');
+
+        if (state === 'numpad') {
+          document.getElementById('input-numpad').classList.remove('hidden');
+        } else if (state === 'judgment') {
+          document.getElementById('input-judgment').classList.remove('hidden');
+          document.getElementById('judgment-guess-val').textContent = val;
+        } else if (state === 'waiting') {
+          document.getElementById('input-waiting').classList.remove('hidden');
+        }
+      },
+
+      logEntry(msg, type) {
+        const log = document.getElementById('battle-log');
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        div.textContent = msg;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      },
+
+      shake() {
+        const ui = document.getElementById('game-ui');
+        ui.classList.remove('shake');
+        void ui.offsetWidth; // trigger reflow
+        ui.classList.add('shake');
+      },
+
+      // Easter Egg Cipher
+      eggSeq: [],
+      handleEasterEgg(key) {
+        this.eggSeq.push(key.toLowerCase());
+        if (this.eggSeq.length > 5) this.eggSeq.shift();
+        if (this.eggSeq.join('') === 'magic') {
+          window.history.replaceState({}, '', '?cipher=unlocked');
+          this.logSystem("Cipher Unlocked! You found the secret.");
+          this.eggSeq = [];
+        }
+      },
+      logSystem(msg) {
+        if (Game.state === 'playing') this.logEntry(msg, 'system');
+        else alert(msg);
+      },
+
+      // Confetti logic
+      showConfetti() {
+        const canvas = document.getElementById('confetti');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const particles = [];
+        for (let i = 0; i < 100; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            r: Math.random() * 6 + 2,
+            dx: Math.random() * 4 - 2,
+            dy: Math.random() * 5 + 2,
+            color: `hsl(${Math.random() * 360}, 100%, 50%)`
+          });
+        }
+        let frame = 0;
+        function animate() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach(p => {
+            p.y += p.dy;
+            p.x += p.dx;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+          });
+          frame++;
+          if (frame < 200) requestAnimationFrame(animate);
+          else ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        animate();
+      }
+    };
+
+    // INIT
+    window.onload = () => UI.init();
+
+  </script>
+</body>
+
 </html>
