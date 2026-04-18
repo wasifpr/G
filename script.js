@@ -1,7 +1,7 @@
 // --- GLOBAL VARIABLES ---
 let secretNumber, low, high, p1Hp, p2Hp, currentMode, aiLevel;
 let maxGuesses = 7; 
-let maxRange = 100; // Locked strictly to 1-100 per your instructions
+let maxRange = 100; // Locked strictly to 1-100
 let activePlayer = 1; 
 let currentGuessString = "";
 let pendingManualGuess = 0; 
@@ -39,12 +39,15 @@ function playSound(type) {
     else if (type === 'win') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4); }
 }
 
-// --- DOM ELEMENTS ---
+// --- DOM ELEMENTS (CRASH-PROOFED) ---
 const msgEl = document.getElementById('message'); const setupMenu = document.getElementById('setup-menu');
 const onlineLobby = document.getElementById('online-lobby'); const controlsEl = document.getElementById('controls');
 const healthSec = document.getElementById('health-section'); const statusBd = document.getElementById('status-board');
 const bLog = document.getElementById('battle-log'); const inputDisp = document.getElementById('user-input-display');
-const gameCard = document.getElementById('game-card'); const diffSelect = document.getElementById('ai-algorithm');
+const gameCard = document.getElementById('game-card'); 
+
+// Safely grabs the dropdown regardless of which HTML file you are using
+const diffSelect = document.getElementById('ai-algorithm') || document.getElementById('difficulty');
 
 // --- VIRTUAL NUMPAD & DESKTOP KEYBOARD ---
 function numPress(val) { 
@@ -82,36 +85,51 @@ function generateRoomCode() { return Math.random().toString(36).substring(2, 6).
 const peerConfig = { config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] } };
 
 function hostOnlineGame() {
-    saveProfile(); aiLevel = diffSelect.value; currentMode = document.getElementById('game-mode').value;
-    const rc = generateRoomCode(); document.getElementById('my-code').innerText = rc; document.getElementById('room-code-display').style.display = 'block';
-    peer = new Peer('numbattle-' + rc, peerConfig);
-    peer.on('connection', (c) => {
-        conn = c; setupNet(); isOnline = true; myPlayerId = 1; 
-        secretNumber = Math.floor(Math.random() * maxRange) + 1; 
-        // We sync the exact game mode the Host chose so the Guest's UI matches perfectly
-        conn.on('open', () => { conn.send({ type: 'START', secret: secretNumber, mode: currentMode, name: userProfile.username, av: userProfile.avatar }); initGame("Connected!"); });
-    });
+    try {
+        saveProfile(); 
+        aiLevel = diffSelect ? diffSelect.value : 'normal'; 
+        currentMode = document.getElementById('game-mode').value;
+        
+        const rc = generateRoomCode(); 
+        document.getElementById('my-code').innerText = rc; 
+        document.getElementById('room-code-display').style.display = 'block';
+        
+        peer = new Peer('numbattle-' + rc, peerConfig);
+        
+        // Catch network errors (like adblockers or strict firewalls)
+        peer.on('error', (err) => { alert("Network Error: " + err.type + ". Please refresh or check your connection."); });
+
+        peer.on('connection', (c) => {
+            conn = c; setupNet(); isOnline = true; myPlayerId = 1; 
+            secretNumber = Math.floor(Math.random() * maxRange) + 1; 
+            conn.on('open', () => { conn.send({ type: 'START', secret: secretNumber, mode: currentMode, name: userProfile.username, av: userProfile.avatar }); initGame("Connected!"); });
+        });
+    } catch(e) {
+        alert("System Error: Could not initialize hosting.");
+        console.error(e);
+    }
 }
 
 function joinOnlineGame() {
     saveProfile(); let code = document.getElementById('join-code').value.toUpperCase(); if(code.length !== 4) return alert("Invalid Code");
     msgEl.innerHTML = "Connecting..."; peer = new Peer(null, peerConfig); 
+    
+    peer.on('error', (err) => { alert("Connection Failed. Check the Room Code and try again."); });
     peer.on('open', () => { conn = peer.connect('numbattle-' + code); setupNet(); });
 }
 
 function setupNet() {
     conn.on('data', (d) => {
         if (d.type === 'START') { 
-            isOnline = true; myPlayerId = 2; secretNumber = d.secret; currentMode = d.mode; // Guest locks into Host's mode
+            isOnline = true; myPlayerId = 2; secretNumber = d.secret; currentMode = d.mode; 
             initGame("Connected!"); document.getElementById('p1-label').innerText = `${d.av} ${d.name}`; 
             conn.send({ type: 'SYNC', name: userProfile.username, av: userProfile.avatar }); 
         } 
         else if (d.type === 'GUESS') processGuess(d.p, d.val);
         else if (d.type === 'SYNC') { document.getElementById('p2-label').innerText = `${d.av} ${d.name}`; }
-        // NEW: Network pipeline for True PvP Mode
         else if (d.type === 'MANUAL_GUESS') {
             pendingManualGuess = d.val;
-            activePlayer = 1; // It is now Host's turn to judge
+            activePlayer = 1; 
             document.getElementById('input-controls').style.display = 'none';
             document.getElementById('feedback-controls').style.display = 'grid';
             document.querySelectorAll('.feedback-controls button').forEach(b => b.disabled = false);
@@ -126,10 +144,16 @@ function setupNet() {
 
 // --- GAME LOGIC INITIALIZATION ---
 function startGame() {
-    saveProfile(); aiLevel = diffSelect.value;
+    saveProfile(); 
+    aiLevel = diffSelect ? diffSelect.value : 'normal';
     currentMode = document.getElementById('game-mode').value; isOnline = false; myPlayerId = 1;
-    secretNumber = Math.floor(Math.random() * maxRange) + 1; // Used for PvE
-    initGame("Game Started!");
+    secretNumber = Math.floor(Math.random() * maxRange) + 1; 
+    
+    let startMsg = "Game Started!";
+    if (currentMode === 'reverse') startMsg = `Think of a number (1-${maxRange}). I will guess it!`;
+    if (currentMode === 'pvp_manual') startMsg = `<b>Player 1:</b> Think of a number (1-${maxRange}).<br><b>Player 2:</b> You guess first!`;
+
+    initGame(startMsg);
 }
 
 function initGame(msg) {
@@ -141,11 +165,9 @@ function initGame(msg) {
     if (currentMode === 'pvp_manual') document.getElementById('p2-label').innerText = "🧑 P2 (Guesser)";
     else document.getElementById('p2-label').innerText = (isOnline && myPlayerId === 2 ? `${userProfile.avatar} YOU` : "🤖 Robot");
     
-    updateUI(); 
+    updateUI(); msgEl.innerHTML = msg;
 
-    // Specific UI setups based on the 3 modes
     if (currentMode === 'reverse') {
-        msgEl.innerHTML = `Think of a number (1-${maxRange}). I will guess it!`;
         document.getElementById('input-controls').style.display = 'none';
         document.getElementById('feedback-controls').style.display = 'grid';
         activePlayer = 2; updateUI(); setTimeout(robotTurnReverse, 1500);
@@ -244,7 +266,6 @@ function manualFeedback(t) {
         applyManualFeedback(t, pendingManualGuess);
     } 
     else if (currentMode === 'reverse') {
-        // Reverse mode logic (You judge Robot)
         if (t === 'C') { triggerWin(2); return; }
         p1Hp--; updateUI(); triggerDamage();
         if (p1Hp <= 0) { triggerDraw(); return; }
@@ -259,7 +280,7 @@ function applyManualFeedback(t, guessVal) {
     if (t === 'C') { triggerWin(2); return; } // P2 guessed correctly!
     
     p2Hp--; updateUI(); triggerDamage();
-    if (p2Hp <= 0) { triggerWin(1); return; } // EXPERT FIX: If P2 runs out of HP, P1 wins!
+    if (p2Hp <= 0) { triggerWin(1); return; } // If P2 runs out of HP, P1 wins!
 
     if (t === 'H') { high = guessVal - 1; appendLog(`P2: ${guessVal} (HIGH)`, 'log-p2'); } 
     else if (t === 'L') { low = guessVal + 1; appendLog(`P2: ${guessVal} (LOW)`, 'log-p2'); }
@@ -267,7 +288,6 @@ function applyManualFeedback(t, guessVal) {
     activePlayer = 2; // Pass turn back to guesser
     updateUI();
 
-    // Show input pad only to the local guesser OR the online Guest
     if (!isOnline || (isOnline && myPlayerId === 2)) {
         document.getElementById('input-controls').style.display = 'flex';
         document.getElementById('feedback-controls').style.display = 'none';
