@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f2027">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Ultimate Number Battle</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -17,7 +15,7 @@
     <div class="game-card" id="game-card">
         <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Toggle Sound">🔊</button>
         <div class="emoji-display" id="emoji-display">📱</div>
-        <div class="speech-bubble" id="message">Select your mode and AI level!</div>
+        <div class="speech-bubble" id="message">Select your mode and AI Algorithm!</div>
 
         <div class="setup" id="setup-menu">
             <div class="profile-card">
@@ -36,14 +34,14 @@
             <select id="game-mode">
                 <option value="pve">Mode 1: You Guess Robot's Number</option>
                 <option value="reverse">Mode 2: You Judge Robot's Guesses</option>
-                <option value="pvp">Mode 3: Local Pass & Play (2 Player)</option>
+                <option value="pvp_manual">Mode 3: True PvP (P1 Thinks, P2 Guesses)</option>
             </select>
 
-            <select id="difficulty">
-                <option value="easy">Easy (1-50) | Random AI</option>
-                <option value="normal" selected>Normal (1-100) | Binary AI</option>
-                <option value="hard">Hard (1-500) | Golden Ratio AI</option>
-                <option value="expert">Expert (1-1000) | Interpolation AI</option>
+            <select id="ai-algorithm">
+                <option value="easy">Robot Brain: Random (Easy)</option>
+                <option value="normal" selected>Robot Brain: Binary (Normal)</option>
+                <option value="hard">Robot Brain: Golden Ratio (Hard)</option>
+                <option value="expert">Robot Brain: Interpolation (Expert)</option>
             </select>
 
             <button class="btn-blue" onclick="startGame()">Start Local Game</button>
@@ -93,9 +91,7 @@
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(() => console.log('PWA Ready!'));
-        }
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
     </script>
     <script src="script.js"></script>
 </body>
